@@ -1,0 +1,34 @@
+#!/usr/bin/env python3
+
+from PIL import Image
+import argparse
+import os
+
+from amigautils import png2image
+
+DESCRIPTION = """png2image - Amiga Image Converter
+
+This tool converts a PNG image to a C header file containing image
+information in planar format. Optionally it generates the data
+structures needed for usage as Intuition image."""
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
+                                     description=DESCRIPTION)
+    parser.add_argument('pngfile', help="input PNG file")
+    parser.add_argument('headerfile', help="output header file")
+    parser.add_argument('--img_name', default='image', help="variable name of the image")
+    parser.add_argument('--use_intuition', action='store_true', help="generate data for Intuition")
+    parser.add_argument('--verbose', action='store_true', help="verbose mode")
+    parser.add_argument('--interleaved', action='store_true', help="store data in interleaved manner")
+
+    args = parser.parse_args()
+    im = Image.open(args.pngfile)
+    if not os.path.exists(args.headerfile):
+        with open(args.headerfile, 'w') as outfile:
+            png2image.write_amiga_image(im, outfile, img_name=args.img_name,
+                                        use_intuition=args.use_intuition,
+                                        interleaved=args.interleaved,
+                                        verbose=args.verbose)
+    else:
+        print("file '%s' already exists." % args.headerfile)
