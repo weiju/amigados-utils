@@ -1,0 +1,21 @@
+#!/usr/bin/env python3
+import os
+import argparse
+
+from amigautils.hunktools import dalf
+
+
+if __name__ == '__main__':
+    description = """dalf.py - Dumps Amiga Load Files with Python (c) 2014-2023 Wei-ju Wu"""
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument('hunkfile', help="hunk format file")
+    parser.add_argument('--disassemble', action="store_true", default=False,
+                        help="show disassembly")
+    parser.add_argument('--detail', action="store_true", default=False,
+                        help="show data")
+    parser.add_argument('--dump_code', action="store_true", default=False,
+                        help="extracts and dumps each code hunk to a separate file")
+
+    args = parser.parse_args()
+    dalf.parse_hunkfile(args.hunkfile, disassembled=args.disassemble, dump_code=args.dump_code,
+                        detail=args.detail)
