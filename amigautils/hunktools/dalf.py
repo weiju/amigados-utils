@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """A tool like dalf.rexx that can be used to inspect the structure of
 an Amiga Hunk file.
 """
@@ -270,4 +269,3 @@ def parse_hunkfile(hunkfile, disassembled, dump_code, detail):
 
         if dump_code:
             dump_code_hunks(hunkfile, hunks)
-

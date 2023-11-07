@@ -49,4 +49,4 @@ if __name__ == '__main__':
           classifiers=CLASSIFIERS,
           install_requires=INSTALL_REQUIRES,
           include_package_data=True, package_data=PACKAGE_DATA,
-          scripts=['bin/amu-png2image'])
+          scripts=['bin/amu-png2image', 'bin/amu-fdtool', 'bin/amu-dalf'])

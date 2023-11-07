@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 """
 For license, see gpl-3.0.txt
 """
