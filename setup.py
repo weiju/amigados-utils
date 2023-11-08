@@ -28,7 +28,7 @@ CLASSIFIERS = [
     "Programming Language :: Python :: Implementation :: CPython",
     "Topic :: Software Development :: Libraries :: Python Modules"
     ]
-INSTALL_REQUIRES = ['pillow']
+INSTALL_REQUIRES = ['pillow', 'Jinja2']
 
 PACKAGE_DATA = {
     'amigautils': []
