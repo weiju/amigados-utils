@@ -1,4 +1,4 @@
-# amigautils - Command line utilities for Amiga system development
+# amigadev-utils - Command line utilities for Amiga system development
 
 ## Description
 
@@ -6,9 +6,12 @@ This is a set of utilities to facilitate Amiga development in a Unix style
 environment.
 The tools are written in Python.
 
-  * ami-png2image
+  * adu-bumprev - replacement for BumpRev
+  * adu-dalf - replacement for Dalf
+  * adu-fdtool - replacement for fd2pragma (just started)
+  * adu-png2image - image converter
 
 ## Installation
 
-pip install amigautils
+pip install amigadev-utils
 

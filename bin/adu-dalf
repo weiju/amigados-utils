@@ -2,7 +2,7 @@
 import os
 import argparse
 
-from amigautils.hunktools import dalf
+from amigadev.hunktools import dalf
 
 
 if __name__ == '__main__':
