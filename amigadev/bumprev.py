@@ -1,5 +1,7 @@
 import os
 import jinja2
+from datetime import date
+
 
 C_HEADER_TEMPLATE = """#define VERSION     {{version}}
 #define REVISION    {{revision}}
@@ -50,12 +52,13 @@ def bumprev(version, appname):
     with open(rev_file, "w") as outfile:
         outfile.write("%d" % revision)
 
-    date = "27.10.2023"  # TODO
+    today = date.today()
+    date_str = today.strftime("%d.%m.%Y")
     config = {
         "app_name": appname.replace("_rev", ""),
         "version": version,
         "revision": revision,
-        "date": date
+        "date": date_str
     }
     ch_templ = jinja2.Template(C_HEADER_TEMPLATE)
     with open(h_file, "w") as outfile:

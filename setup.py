@@ -3,13 +3,13 @@ import re
 import codecs
 from setuptools import setup
 
-NAME = 'amiga_utils'
-PACKAGES = ['amigautils']
-DESCRIPTION = 'amigautils is a collection of utilities for Amiga system development'
+NAME = 'amigadev-utils'
+PACKAGES = ['amigadev']
+DESCRIPTION = 'amigadev-utils is a collection of utilities for Amiga system development'
 LICENSE = 'GPL V3'
-URI = 'https://github.com/weiju/amigautils'
+URI = 'https://github.com/weiju/amigadev-utils'
 AUTHOR = 'Wei-ju Wu'
-VERSION = '0.0.1'
+VERSION = '0.1.0'
 
 KEYWORDS = ['amiga', 'system', 'development', 'classic', 'ecs', 'aga']
 
@@ -31,7 +31,7 @@ CLASSIFIERS = [
 INSTALL_REQUIRES = ['pillow', 'Jinja2']
 
 PACKAGE_DATA = {
-    'amigautils': []
+    'amigadev': []
 }
 
 if __name__ == '__main__':
