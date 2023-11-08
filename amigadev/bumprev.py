@@ -42,7 +42,9 @@ def bumprev(version, appname):
         with open(rev_file) as infile:
             line = infile.readline()
             revision = int(line.strip())
+            revision += 1
     else:
+        print("bumprev: creating new file \"%s\"" % rev_file)
         revision = 1
 
     with open(rev_file, "w") as outfile:
@@ -62,3 +64,5 @@ def bumprev(version, appname):
     ai_templ = jinja2.Template(ASM_INC_TEMPLATE)
     with open(i_file, "w") as outfile:
         outfile.write(ai_templ.render(config))
+
+    print("bumprev: bumped %s to revision %d" % (appname, revision))
