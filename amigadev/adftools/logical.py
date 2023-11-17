@@ -16,6 +16,9 @@ MAX_BITMAP_BLOCKS = 25
 
 
 class BootBlock:
+    """The Boot block in an Amiga DOS volume.
+    It stores information about the file system and a checksum of this block
+    """
     def __init__(self, logical_volume):
         self.logical_volume = logical_volume
 

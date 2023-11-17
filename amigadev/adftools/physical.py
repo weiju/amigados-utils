@@ -1,4 +1,5 @@
 """physical.py - Physical aspects of an Amiga Volume"""
+import struct
 
 class Sector:
     """Sector is a partial view on a physical volume"""
@@ -12,13 +13,10 @@ class Sector:
         self.data[bytenum] = value
 
     def u16_at(self, bytenum):
-        pass
+        return struct.unpack(">H", self.data[bytenum:bytenum + 2])[0]
 
     def u32_at(self, bytenum):
-        pass
-
-    def set_u32_at(self, bytenum, value):
-        pass
+        return struct.unpack(">I", self.data[bytenum:bytenum + 4])[0]
 
 
 # Double Density Disk numbers

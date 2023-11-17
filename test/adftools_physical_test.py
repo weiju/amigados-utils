@@ -27,6 +27,24 @@ class ADFToolsPhysicalTest(unittest.TestCase):  # pylint: disable-msg=R0904
         self.assertEqual(25, disk[1])
         self.assertEqual(25, sector0[1])
 
+    def test_sector_u16_at(self):
+        disk = physical.DoubleDensityDisk()
+        disk[2] = 0x47
+        disk[3] = 0x11
+
+        sector0 = disk.sector(0)
+        self.assertEqual(0x4711, sector0.u16_at(2))
+
+    def test_sector_u32_at(self):
+        disk = physical.DoubleDensityDisk()
+        disk[0] = 0x08
+        disk[1] = 0x15
+        disk[2] = 0x47
+        disk[3] = 0x11
+
+        sector0 = disk.sector(0)
+        self.assertEqual(0x08154711, sector0.u32_at(0))
+
 
 if __name__ == '__main__':
     SUITE = []
