@@ -1,23 +1,22 @@
 #!/usr/bin/env python3
 
-"""adftools_physical_test.py
-"""
+"""adftools_physical_test.py"""
+
 import unittest
 import xmlrunner
 import sys
 from amigadev.adftools import physical
 
+
 class ADFToolsPhysicalTest(unittest.TestCase):  # pylint: disable-msg=R0904
     """Test class for physical module"""
 
     def test_disk(self):
-        """test the chunks() function"""
         disk = physical.DoubleDensityDisk()
         disk[0] = 23
         self.assertEqual(23, disk[0])
 
     def test_sector(self):
-        """test the chunks() function"""
         disk = physical.DoubleDensityDisk()
         sector0 = disk.sector(0)
         disk[0] = 23
