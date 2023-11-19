@@ -57,4 +57,6 @@ def read_ddd_image(file):
     data = file.read()
     if len(data) != DDD_IMAGE_SIZE:
         raise Exception("Wrong image size !!! (expected %d but was %d)" % (DDD_IMAGE_SIZE, len(data)))
-    return DoubleDensityDisk(data)
+    result = DoubleDensityDisk()
+    result.data = data
+    return result

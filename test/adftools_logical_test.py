@@ -27,6 +27,14 @@ class ADFToolsLogicalTest(unittest.TestCase):  # pylint: disable-msg=R0904
         self.assertTrue(volume.boot_block.is_dos())
         self.assertEqual("FFS", volume.boot_block.filesystem_type())
 
+    def test_read_wbdisk(self):
+        """read WB disk"""
+        with open("testdata/wbench1.3.adf", "rb") as infile:
+            disk = physical.read_ddd_image(infile)
+        volume = logical.LogicalVolume(disk)
+        self.assertTrue(volume.boot_block.is_dos())
+        self.assertEqual("OFS", volume.boot_block.filesystem_type())
+
 
 if __name__ == '__main__':
     SUITE = []
