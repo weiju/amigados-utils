@@ -15,3 +15,10 @@ The tools are written in Python.
 
 pip install amigadev-utils
 
+
+## References
+
+ROM Kernel Manuals: http://amigadev.elowar.com/
+ADF format: http://lclevy.free.fr/adflib/adf_info.html
+
+

@@ -48,6 +48,13 @@ class BootBlock:
         return "FFS" if (self.flags() & 1) == 1 else "OFS"
 
 
+class RootBlock:
+    def __init__(self, logical_volume, blocknum):
+        self.logical_volume = logical_volume
+        self.blocknum = blocknum
+
+
+
 class LogicalVolume:
 
     def __init__(self, physical_volume):
