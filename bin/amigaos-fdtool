@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 
-from amigadev import fdtool
+from amigaos import fdtool
 
 
 if __name__ == '__main__':

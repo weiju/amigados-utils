@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 
-from amigadev.adftools import logical, physical, util
+from amigaos.adftools import logical, physical, util
 
 def list_dir(volume, header_block):
     dirs = []
@@ -30,6 +30,15 @@ def list_dir2(volume, header_block):
             sec_type = "Dir" if hblock.secondary_type() == 2 else "File"
             print("ht[%d] %s" % (i,  hblock.name()))
 
+def find_header(volume, cur_header, filename):
+    hash_index = util.compute_hash(filename, cur_header.block_size())
+    sector_num = cur_header.hashtable_entry_at(hash_index)
+    header = volume.header_block_at(sector_num)
+    if header.name().upper() != filename.upper():
+        # TODO follow hash chain
+        pass
+    return header
+
 
 if __name__ == '__main__':
     description = """adu-dir - Python implementation of AmigaDOS dir"""
@@ -52,11 +61,7 @@ if __name__ == '__main__':
             print("/")
             list_dir(volume, root_block)
         else:
-            dir0 = path[0]
+            pathcomp = path[0]
             cur_header = root_block
-            hash_index = util.compute_hash(dir0, root_block.block_size())
-            sector_num = cur_header.hashtable_entry_at(hash_index)
-            print("Listing dir %s, sector: %d" % (dir0, sector_num))
-            cur_header = volume.header_block_at(sector_num)
-            print(cur_header.name())
-            list_dir2(volume, cur_header)
+            header = find_header(volume, cur_header, pathcomp)
+            print(header.name())

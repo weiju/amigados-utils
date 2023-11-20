@@ -3,11 +3,11 @@ import re
 import codecs
 from setuptools import setup
 
-NAME = 'amigadev-utils'
-PACKAGES = ['amigadev']
-DESCRIPTION = 'amigadev-utils is a collection of utilities for Amiga system development'
+NAME = 'amigaos-utils'
+PACKAGES = ['amigaos']
+DESCRIPTION = 'amigaos-utils is a collection of utilities for Amiga system development'
 LICENSE = 'GPL V3'
-URI = 'https://github.com/weiju/amigadev-utils'
+URI = 'https://github.com/weiju/amigaos-utils'
 AUTHOR = 'Wei-ju Wu'
 VERSION = '0.1.0'
 
@@ -31,7 +31,7 @@ CLASSIFIERS = [
 INSTALL_REQUIRES = ['pillow', 'Jinja2']
 
 PACKAGE_DATA = {
-    'amigadev': []
+    'amigaos': []
 }
 
 if __name__ == '__main__':
@@ -49,5 +49,6 @@ if __name__ == '__main__':
           classifiers=CLASSIFIERS,
           install_requires=INSTALL_REQUIRES,
           include_package_data=True, package_data=PACKAGE_DATA,
-          scripts=['bin/adu-png2image', 'bin/adu-fdtool', 'bin/adu-dalf',
-                   'bin/adu-bumprev', 'bin/adu-dir'])
+          scripts=['bin/amigaos-png2image', 'bin/amigaos-fdtool',
+                   'bin/amigaos-dalf',
+                   'bin/amigaos-bumprev', 'bin/amigaos-dir'])

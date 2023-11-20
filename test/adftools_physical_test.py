@@ -5,7 +5,7 @@
 import unittest
 import xmlrunner
 import sys
-from amigadev.adftools import physical
+from amigaos.adftools import physical
 
 
 class ADFToolsPhysicalTest(unittest.TestCase):  # pylint: disable-msg=R0904
