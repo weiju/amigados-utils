@@ -65,14 +65,13 @@ class BootBlock:
 
 class HeaderBlock:
     """A logical view on header blocks. Those are the first block of a directory
-    or file. A special type of block is the root block, which is at a fixed position (880)"""
+    or file."""
     def __init__(self, logical_volume, blocknum):
         self.logical_volume = logical_volume
         self.blocknum = blocknum
 
     def block_size(self):
-        # TODO: this is currently hardcoded to double density disks
-        return physical.DDD_BYTES_PER_SECTOR
+        return self.sector().size_in_bytes()
 
     def sector(self):
         return self.physical_volume().sector(self.blocknum)
@@ -99,12 +98,15 @@ class HeaderBlock:
             result += chr(sector[soffset + i + 1])
         return result
 
-    def last_modification_time(self):
+    def _amigados_time_at(self, offset):
         sector = self.sector()
-        days = sector.i32_at(sector.size_in_bytes() - 92)
-        minutes = sector.i32_at(sector.size_in_bytes() - 88)
-        ticks = sector.i32_at(sector.size_in_bytes() - 84)
+        days = sector.i32_at(sector.size_in_bytes() - offset)
+        minutes = sector.i32_at(sector.size_in_bytes() - offset + 4)
+        ticks = sector.i32_at(sector.size_in_bytes() - offset + 8)
         return util.amigados_time_to_datetime(days, minutes, ticks)
+
+    def last_modification_time(self):
+        return self._amigados_time_at(92)
 
     def header_key(self):
         return self.sector().u32_at(4)
@@ -112,11 +114,36 @@ class HeaderBlock:
     def hashtable_size(self):
         return self.sector().u32_at(12)
 
+    def hashtable_entry_at(self, index):
+        sector = self.sector()
+        if index > self.hashtable_size():
+            raise IndexError("Index out of bounds: %d, hash table size: %d" %
+                             (index, self.hashtable_size()))
+        return sector.u32_at(24 + (index * 4))
+
     def stored_checksum(self):
         return self.sector().u32_at(20)
 
     def computed_checksum(self):
         return util.headerblock_checksum(self.data(), self.block_size())
+
+    def bitmap_flag(self):
+        return self.sector().i32_at(self.block_size() - 200)
+
+
+class RootBlock(HeaderBlock):
+    """A logical view on the root block, a special header block, which is at a
+    fixed position (880 for DD disks).
+    These are the methods that only apply to the root block"""
+    def __init__(self, logical_volume, blocknum):
+        super().__init__(logical_volume, blocknum)
+
+    def last_disk_modification_time(self):
+        return self._amigados_time_at(40)
+
+    def last_filesys_modification_time(self):
+        return self._amigados_time_at(28)
+
 
 class LogicalVolume:
 
@@ -130,5 +157,5 @@ class LogicalVolume:
         return BootBlock(self)
 
     def root_block(self):
-        return HeaderBlock(self, DDD_ROOT_BLOCK_NUMBER)
+        return RootBlock(self, DDD_ROOT_BLOCK_NUMBER)
 

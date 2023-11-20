@@ -56,6 +56,7 @@ class ADFToolsLogicalTest(unittest.TestCase):  # pylint: disable-msg=R0904
         self.assertEqual(0x48, volume.root_block().hashtable_size())
         self.assertEqual(volume.root_block().stored_checksum(),
                          volume.root_block().computed_checksum())
+        self.assertEqual(-1, volume.root_block().bitmap_flag())
 
 
 if __name__ == '__main__':
