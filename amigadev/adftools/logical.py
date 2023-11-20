@@ -70,18 +70,28 @@ class HeaderBlock:
         self.logical_volume = logical_volume
         self.blocknum = blocknum
 
+    def block_size(self):
+        # TODO: this is currently hardcoded to double density disks
+        return physical.DDD_BYTES_PER_SECTOR
+
+    def sector(self):
+        return self.physical_volume().sector(self.blocknum)
+
+    def data(self):
+        return self.sector().data
+
     def physical_volume(self):
         return self.logical_volume.physical_volume
 
     def primary_type(self):
-        return self.physical_volume().sector(self.blocknum).i32_at(0)
+        return self.sector().u32_at(0)
 
     def secondary_type(self):
-        sector = self.physical_volume().sector(self.blocknum)
-        return sector.i32_at(sector.size_in_bytes() - 4)
+        sector = self.sector()
+        return sector.u32_at(sector.size_in_bytes() - 4)
 
     def name(self):
-        sector = self.physical_volume().sector(self.blocknum)
+        sector = self.sector()
         soffset = sector.size_in_bytes() - 80
         slen = sector[soffset]
         result = ""
@@ -89,11 +99,32 @@ class HeaderBlock:
             result += chr(sector[soffset + i + 1])
         return result
 
+    def last_modification_time(self):
+        sector = self.sector()
+        days = sector.i32_at(sector.size_in_bytes() - 92)
+        minutes = sector.i32_at(sector.size_in_bytes() - 88)
+        ticks = sector.i32_at(sector.size_in_bytes() - 84)
+        return util.amigados_time_to_datetime(days, minutes, ticks)
+
+    def header_key(self):
+        return self.sector().u32_at(4)
+
+    def hashtable_size(self):
+        return self.sector().u32_at(12)
+
+    def stored_checksum(self):
+        return self.sector().u32_at(20)
+
+    def computed_checksum(self):
+        return util.headerblock_checksum(self.data(), self.block_size())
 
 class LogicalVolume:
 
     def __init__(self, physical_volume):
         self.physical_volume = physical_volume
+
+    def initialize(self, fs_type="FFS", is_international=False, use_dircache=False):
+        self.boot_block().initialize(fs_type, is_international, use_dircache)
 
     def boot_block(self):
         return BootBlock(self)
@@ -101,5 +132,3 @@ class LogicalVolume:
     def root_block(self):
         return HeaderBlock(self, DDD_ROOT_BLOCK_NUMBER)
 
-    def initialize(self, fs_type="FFS", is_international=False, use_dircache=False):
-        self.boot_block().initialize(fs_type, is_international, use_dircache)

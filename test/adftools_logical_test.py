@@ -32,14 +32,30 @@ class ADFToolsLogicalTest(unittest.TestCase):  # pylint: disable-msg=R0904
         with open("testdata/wbench1.3.adf", "rb") as infile:
             disk = physical.read_ddd_image(infile)
         volume = logical.LogicalVolume(disk)
+
+        # Boot block
         self.assertTrue(volume.boot_block().is_dos())
         self.assertEqual("OFS", volume.boot_block().filesystem_type())
-        self.assertEqual(logical.BLOCK_TYPE_HEADER, volume.root_block().primary_type())
-        self.assertEqual(logical.BLOCK_SEC_TYPE_ROOT, volume.root_block().secondary_type())
-        self.assertEqual("Workbench1.3", volume.root_block().name())
         # verify checksum computation
         self.assertEqual(volume.boot_block().stored_checksum(),
                          volume.boot_block().computed_checksum())
+
+        # Root block
+        self.assertEqual(logical.BLOCK_TYPE_HEADER, volume.root_block().primary_type())
+        self.assertEqual(logical.BLOCK_SEC_TYPE_ROOT, volume.root_block().secondary_type())
+        self.assertEqual(0, volume.root_block().header_key())
+        self.assertEqual("Workbench1.3", volume.root_block().name())
+        modified = volume.root_block().last_modification_time()
+        #1989-08-17 18:21:31.480000
+        self.assertEqual(1989, modified.year)
+        self.assertEqual(8, modified.month)
+        self.assertEqual(17, modified.day)
+        self.assertEqual(18, modified.hour)
+        self.assertEqual(21, modified.minute)
+        self.assertEqual(31, modified.second)
+        self.assertEqual(0x48, volume.root_block().hashtable_size())
+        self.assertEqual(volume.root_block().stored_checksum(),
+                         volume.root_block().computed_checksum())
 
 
 if __name__ == '__main__':

@@ -23,7 +23,6 @@ def amigados_time_to_datetime(days_since_jan_1_78,
 
 def bootblock_checksum(data, num_bytes):
     """bootblock checksum function"""
-    print("bootblock_checksum() numbytes: %d" % num_bytes)
     result = 0
     for i in range(0, num_bytes, 4):
         if i == 4:
@@ -38,3 +37,22 @@ def bootblock_checksum(data, num_bytes):
             result -= 0xffffffff
 
     return ~result & 0xffffffff
+
+
+def headerblock_checksum(data, num_bytes):
+    """header block checksum function"""
+    result = 0
+    for i in range(0, num_bytes, 4):
+        # ignore the checksum field itself for the computation
+        if i == 20:
+            continue
+
+        d = struct.unpack(">I", data[i:i + 4])[0]
+        result += d
+
+        # 32-bit overflow, but Python has unlimited range, so we need to
+        # simulate the overflow
+        if result > 0xffffffff:
+            result = result - 0xffffffff - 1
+
+    return (-result) & 0xffffffff
