@@ -48,6 +48,10 @@ class DoubleDensityDisk:
         """returns signed 32 bit integer value"""
         return struct.unpack(">i", self.data[bytenum:bytenum + 4])[0]
 
+    def u32_at(self, bytenum):
+        """returns signed 32 bit integer value"""
+        return struct.unpack(">I", self.data[bytenum:bytenum + 4])[0]
+
     def sector(self, sector_num):
         idx = sector_num * DDD_BYTES_PER_SECTOR
         # slicing the bytearray creates an independent copy, but we want a

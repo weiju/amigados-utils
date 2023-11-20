@@ -21,17 +21,20 @@ def amigados_time_to_datetime(days_since_jan_1_78,
     return datetime.fromtimestamp((millis + AMIGADOS_BASE_MILLIS) / 1000)
 
 
-def compute_checksum(data, num_bytes, exclude_index=4):
+def bootblock_checksum(data, num_bytes):
     """bootblock checksum function"""
+    print("bootblock_checksum() numbytes: %d" % num_bytes)
     result = 0
-    for i in range(num_bytes, 4):
-        if i != exclude_index:
-            old_sum = result
-            result += struct.unpack(">i", data[i:i + 4])
-            if result > (2 ** 31 - 1):
-                pass
-            # we actualy need to check for 32 bit overflow !!!
-            # Python has unlimited range
-            if result < old_sum:  # integer overflow !!!
-                result += 1
-    return ~result
+    for i in range(0, num_bytes, 4):
+        if i == 4:
+            # ignore the checksum field itself for the computation
+            continue
+        d = struct.unpack(">I", data[i:i + 4])[0]
+        result += d
+
+        # 32-bit overflow, but Python has unlimited range, so we need to
+        # simulate the overflow
+        if result > 0xffffffff:
+            result -= 0xffffffff
+
+    return ~result & 0xffffffff

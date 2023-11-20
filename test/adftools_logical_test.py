@@ -36,6 +36,10 @@ class ADFToolsLogicalTest(unittest.TestCase):  # pylint: disable-msg=R0904
         self.assertEqual("OFS", volume.boot_block().filesystem_type())
         self.assertEqual(logical.BLOCK_TYPE_HEADER, volume.root_block().primary_type())
         self.assertEqual(logical.BLOCK_SEC_TYPE_ROOT, volume.root_block().secondary_type())
+        self.assertEqual("Workbench1.3", volume.root_block().name())
+        # verify checksum computation
+        self.assertEqual(volume.boot_block().stored_checksum(),
+                         volume.boot_block().computed_checksum())
 
 
 if __name__ == '__main__':

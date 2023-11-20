@@ -1,6 +1,7 @@
 """logical.py - Logical view on an Amiga disk"""
 
 from . import physical
+from . import util
 
 BOOT_BLOCK_FLAG_FFS               = 1
 BOOT_BLOCK_FLAG_INTL_ONLY         = 2
@@ -22,6 +23,13 @@ class BootBlock:
     """
     def __init__(self, logical_volume):
         self.logical_volume = logical_volume
+
+    def block_size(self):
+        # TODO: this is currently hardcoded to double density disks
+        return physical.DDD_BYTES_PER_SECTOR * physical.DDD_TRACKS_PER_CYLINDER
+
+    def data(self):
+        return self.logical_volume.physical_volume.data[0:self.block_size()]
 
     def physical_volume(self):
         return self.logical_volume.physical_volume
@@ -48,6 +56,12 @@ class BootBlock:
     def filesystem_type(self):
         return "FFS" if (self.flags() & 1) == 1 else "OFS"
 
+    def computed_checksum(self):
+        return util.bootblock_checksum(self.data(), self.block_size())
+
+    def stored_checksum(self):
+        return self.logical_volume.physical_volume.u32_at(4)
+
 
 class HeaderBlock:
     """A logical view on header blocks. Those are the first block of a directory
@@ -66,6 +80,14 @@ class HeaderBlock:
         sector = self.physical_volume().sector(self.blocknum)
         return sector.i32_at(sector.size_in_bytes() - 4)
 
+    def name(self):
+        sector = self.physical_volume().sector(self.blocknum)
+        soffset = sector.size_in_bytes() - 80
+        slen = sector[soffset]
+        result = ""
+        for i in range(slen):
+            result += chr(sector[soffset + i + 1])
+        return result
 
 
 class LogicalVolume:
