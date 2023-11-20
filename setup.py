@@ -49,4 +49,5 @@ if __name__ == '__main__':
           classifiers=CLASSIFIERS,
           install_requires=INSTALL_REQUIRES,
           include_package_data=True, package_data=PACKAGE_DATA,
-          scripts=['bin/adu-png2image', 'bin/adu-fdtool', 'bin/adu-dalf', 'bin/adu-bumprev'])
+          scripts=['bin/adu-png2image', 'bin/adu-fdtool', 'bin/adu-dalf',
+                   'bin/adu-bumprev', 'bin/adu-dir'])

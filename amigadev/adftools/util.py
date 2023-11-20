@@ -56,3 +56,13 @@ def headerblock_checksum(data, num_bytes):
             result = result - 0xffffffff - 1
 
     return (-result) & 0xffffffff
+
+def compute_hash(name, block_size):
+    """non-international hash function"""
+    hash = len(name)
+    for i in range(len(name)):
+        hash *= 13
+        hash += ord(name[i].upper())
+        hash &= 0x7ff
+    hash %= ((block_size / 4) - 56)
+    return int(hash)

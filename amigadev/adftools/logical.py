@@ -87,7 +87,7 @@ class HeaderBlock:
 
     def secondary_type(self):
         sector = self.sector()
-        return sector.u32_at(sector.size_in_bytes() - 4)
+        return sector.i32_at(sector.size_in_bytes() - 4)
 
     def name(self):
         sector = self.sector()
@@ -158,4 +158,7 @@ class LogicalVolume:
 
     def root_block(self):
         return RootBlock(self, DDD_ROOT_BLOCK_NUMBER)
+
+    def header_block_at(self, sector_num):
+        return HeaderBlock(self, sector_num)
 

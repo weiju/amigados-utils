@@ -1,0 +1,62 @@
+#!/usr/bin/env python3
+import argparse
+
+from amigadev.adftools import logical, physical, util
+
+def list_dir(volume, header_block):
+    dirs = []
+    files = []
+    for i in range(header_block.hashtable_size()):
+        sector_num = header_block.hashtable_entry_at(i)
+        if sector_num > 0:
+            hblock = volume.header_block_at(sector_num)
+            sec_type = "Dir" if hblock.secondary_type() == 2 else "File"
+            if hblock.secondary_type() == 2:
+                dirs.append(hblock.name())
+            else:
+                files.append(hblock.name())
+    print("Directories:")
+    for d in sorted(dirs):
+        print("  %s" % d)
+    print("Files:")
+    for f in sorted(files):
+        print("  %s" % f)
+
+def list_dir2(volume, header_block):
+    for i in range(header_block.hashtable_size()):
+        sector_num = header_block.hashtable_entry_at(i)
+        if sector_num > 0:
+            hblock = volume.header_block_at(sector_num)
+            sec_type = "Dir" if hblock.secondary_type() == 2 else "File"
+            print("ht[%d] %s" % (i,  hblock.name()))
+
+
+if __name__ == '__main__':
+    description = """adu-dir - Python implementation of AmigaDOS dir"""
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument('adf', help="ADFFile")
+    parser.add_argument('path', nargs="?", default="/", help="path (optional)")
+    args = parser.parse_args()
+    path = args.path.split("/")
+    path = [p for p in path if p != '']
+    with open(args.adf, "rb") as infile:
+        disk = physical.read_ddd_image(infile)
+        volume = logical.LogicalVolume(disk)
+        root_block = volume.root_block()
+        print("Volume: '%s' (%d sectors)" % (root_block.name(),
+                                             physical.DDD_SECTORS_TOTAL))
+
+        # if path is empty we list the root directory
+        # else we follow the chain of path components
+        if len(path) == 0:
+            print("/")
+            list_dir(volume, root_block)
+        else:
+            dir0 = path[0]
+            cur_header = root_block
+            hash_index = util.compute_hash(dir0, root_block.block_size())
+            sector_num = cur_header.hashtable_entry_at(hash_index)
+            print("Listing dir %s, sector: %d" % (dir0, sector_num))
+            cur_header = volume.header_block_at(sector_num)
+            print(cur_header.name())
+            list_dir2(volume, cur_header)
