@@ -9,6 +9,9 @@ class Sector:
     def __getitem__(self, bytenum):
         return self.data[bytenum]
 
+    def size_in_bytes(self):
+        return len(self.data)
+
     def __setitem__(self, bytenum, value):
         self.data[bytenum] = value
 
@@ -17,6 +20,9 @@ class Sector:
 
     def u32_at(self, bytenum):
         return struct.unpack(">I", self.data[bytenum:bytenum + 4])[0]
+
+    def i32_at(self, bytenum):
+        return struct.unpack(">i", self.data[bytenum:bytenum + 4])[0]
 
 
 # Double Density Disk numbers

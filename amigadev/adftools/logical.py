@@ -7,13 +7,14 @@ BOOT_BLOCK_FLAG_INTL_ONLY         = 2
 BOOT_BLOCK_FLAG_DIRCACHE_AND_INTL = 4
 
 OFFSET_ROOTBLOCK_NUMBER = 8
-DDD_ROOT_SECTOR_NUMBER  = 880
 DDD_ROOT_BLOCK_NUMBER   = 880
 DDD_BITMAP_BLOCK_NUMBER = 881
 
 # for root block
 MAX_BITMAP_BLOCKS = 25
 
+BLOCK_TYPE_HEADER   = 2
+BLOCK_SEC_TYPE_ROOT = 1
 
 class BootBlock:
     """The Boot block in an Amiga DOS volume.
@@ -48,10 +49,22 @@ class BootBlock:
         return "FFS" if (self.flags() & 1) == 1 else "OFS"
 
 
-class RootBlock:
+class HeaderBlock:
+    """A logical view on header blocks. Those are the first block of a directory
+    or file. A special type of block is the root block, which is at a fixed position (880)"""
     def __init__(self, logical_volume, blocknum):
         self.logical_volume = logical_volume
         self.blocknum = blocknum
+
+    def physical_volume(self):
+        return self.logical_volume.physical_volume
+
+    def primary_type(self):
+        return self.physical_volume().sector(self.blocknum).i32_at(0)
+
+    def secondary_type(self):
+        sector = self.physical_volume().sector(self.blocknum)
+        return sector.i32_at(sector.size_in_bytes() - 4)
 
 
 
@@ -59,8 +72,12 @@ class LogicalVolume:
 
     def __init__(self, physical_volume):
         self.physical_volume = physical_volume
-        self.boot_block = BootBlock(self)
 
+    def boot_block(self):
+        return BootBlock(self)
+
+    def root_block(self):
+        return HeaderBlock(self, DDD_ROOT_BLOCK_NUMBER)
 
     def initialize(self, fs_type="FFS", is_international=False, use_dircache=False):
-        self.boot_block.initialize(fs_type, is_international, use_dircache)
+        self.boot_block().initialize(fs_type, is_international, use_dircache)

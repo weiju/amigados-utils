@@ -16,7 +16,7 @@ class ADFToolsLogicalTest(unittest.TestCase):  # pylint: disable-msg=R0904
         """uninitialized logical volume"""
         disk = physical.DoubleDensityDisk()
         volume = logical.LogicalVolume(disk)
-        self.assertFalse(volume.boot_block.is_dos())
+        self.assertFalse(volume.boot_block().is_dos())
 
 
     def test_initialized_logical(self):
@@ -24,16 +24,18 @@ class ADFToolsLogicalTest(unittest.TestCase):  # pylint: disable-msg=R0904
         disk = physical.DoubleDensityDisk()
         volume = logical.LogicalVolume(disk)
         volume.initialize(fs_type="FFS")
-        self.assertTrue(volume.boot_block.is_dos())
-        self.assertEqual("FFS", volume.boot_block.filesystem_type())
+        self.assertTrue(volume.boot_block().is_dos())
+        self.assertEqual("FFS", volume.boot_block().filesystem_type())
 
     def test_read_wbdisk(self):
         """read WB disk"""
         with open("testdata/wbench1.3.adf", "rb") as infile:
             disk = physical.read_ddd_image(infile)
         volume = logical.LogicalVolume(disk)
-        self.assertTrue(volume.boot_block.is_dos())
-        self.assertEqual("OFS", volume.boot_block.filesystem_type())
+        self.assertTrue(volume.boot_block().is_dos())
+        self.assertEqual("OFS", volume.boot_block().filesystem_type())
+        self.assertEqual(logical.BLOCK_TYPE_HEADER, volume.root_block().primary_type())
+        self.assertEqual(logical.BLOCK_SEC_TYPE_ROOT, volume.root_block().secondary_type())
 
 
 if __name__ == '__main__':
