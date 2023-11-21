@@ -10,10 +10,11 @@ def list_dir(volume, header_block):
         sector_num = header_block.hashtable_entry_at(i)
         if sector_num > 0:
             hblock = volume.header_block_at(sector_num)
-            sec_type = "Dir" if hblock.secondary_type() == 2 else "File"
-            if hblock.secondary_type() == 2:
+            if hblock.is_directory():
+                sec_type = "Dir"
                 dirs.append(hblock.name())
             else:
+                sec_type = "File"
                 files.append(hblock.name())
     print("Directories:")
     for d in sorted(dirs):
@@ -22,6 +23,7 @@ def list_dir(volume, header_block):
     for f in sorted(files):
         print("  %s" % f)
 
+"""
 def list_dir2(volume, header_block):
     for i in range(72):
         sector_num = header_block.hashtable_entry_at(i)
@@ -29,6 +31,7 @@ def list_dir2(volume, header_block):
             hblock = volume.header_block_at(sector_num)
             sec_type = "Dir" if hblock.secondary_type() == 2 else "File"
             print("ht[%d] %s" % (i,  hblock.name()))
+"""
 
 def find_header(volume, cur_header, filename):
     hash_index = util.compute_hash(filename, cur_header.block_size())
@@ -62,8 +65,10 @@ if __name__ == '__main__':
             print("/")
             list_dir(volume, root_block)
         else:
-            # TODO: follow the entire chain
-            pathcomp = path[0]
             cur_header = root_block
-            header = find_header(volume, cur_header, pathcomp)
-            list_dir(volume, header)
+            for pathcomp in path:
+                cur_header = find_header(volume, cur_header, pathcomp)
+            if cur_header.is_directory():
+                list_dir(volume, cur_header)
+            else:
+                print(cur_header.name())

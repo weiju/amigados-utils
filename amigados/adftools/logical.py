@@ -89,6 +89,9 @@ class HeaderBlock:
         sector = self.sector()
         return sector.i32_at(sector.size_in_bytes() - 4)
 
+    def is_directory(self):
+        return self.secondary_type() == 2
+
     def name(self):
         sector = self.sector()
         soffset = sector.size_in_bytes() - 80
