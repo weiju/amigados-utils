@@ -25,14 +25,19 @@ class Sector:
         return struct.unpack(">i", self.data[bytenum:bytenum + 4])[0]
 
 
-# Double Density Disk numbers
-DDD_BYTES_PER_SECTOR = 512
-DDD_SECTORS_PER_TRACK = 11
-DDD_TRACKS_PER_CYLINDER = 2
-DDD_CYLINDERS_PER_DISK = 80
-DDD_SECTORS_TOTAL = DDD_CYLINDERS_PER_DISK * DDD_TRACKS_PER_CYLINDER * DDD_SECTORS_PER_TRACK
-DDD_IMAGE_SIZE = DDD_BYTES_PER_SECTOR * DDD_SECTORS_TOTAL
+FLOPPY_CYLINDERS_PER_DISK = 80
+FLOPPY_BYTES_PER_SECTOR = 512
+FLOPPY_TRACKS_PER_CYLINDER = 2
 
+# Double Density Disk numbers
+DDD_SECTORS_PER_TRACK = 11
+DDD_SECTORS_TOTAL = FLOPPY_CYLINDERS_PER_DISK * FLOPPY_TRACKS_PER_CYLINDER * DDD_SECTORS_PER_TRACK
+DDD_IMAGE_SIZE = FLOPPY_BYTES_PER_SECTOR * DDD_SECTORS_TOTAL
+
+# High density floppies have 22 sectors per track
+HDD_SECTORS_PER_TRACK = 22
+HDD_SECTORS_TOTAL = FLOPPY_CYLINDERS_PER_DISK * FLOPPY_TRACKS_PER_CYLINDER * HDD_SECTORS_PER_TRACK
+HDD_IMAGE_SIZE = FLOPPY_BYTES_PER_SECTOR * HDD_SECTORS_TOTAL
 
 class DoubleDensityDisk:
     def __init__(self):
@@ -53,11 +58,11 @@ class DoubleDensityDisk:
         return struct.unpack(">I", self.data[bytenum:bytenum + 4])[0]
 
     def sector(self, sector_num):
-        idx = sector_num * DDD_BYTES_PER_SECTOR
+        idx = sector_num * FLOPPY_BYTES_PER_SECTOR
         # slicing the bytearray creates an independent copy, but we want a
         # Sector be a view that writes to the underlying array, so we create
         # memoryview, and slice it to achive the dessired effect
-        return Sector(memoryview(self.data)[idx:idx + DDD_BYTES_PER_SECTOR])
+        return Sector(memoryview(self.data)[idx:idx + FLOPPY_BYTES_PER_SECTOR])
 
     def write_image(file):
         file.write(self.data)
