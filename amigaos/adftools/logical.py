@@ -112,7 +112,9 @@ class HeaderBlock:
         return self.sector().u32_at(4)
 
     def hashtable_size(self):
-        return self.sector().u32_at(12)
+        """This is hard coded, because header blocks don't contain the size.
+        Adjust according to the disk type"""
+        return 72
 
     def hashtable_entry_at(self, index):
         sector = self.sector()
@@ -137,6 +139,9 @@ class RootBlock(HeaderBlock):
     These are the methods that only apply to the root block"""
     def __init__(self, logical_volume, blocknum):
         super().__init__(logical_volume, blocknum)
+
+    def hashtable_size(self):
+        return self.sector().u32_at(12)
 
     def last_disk_modification_time(self):
         return self._amigados_time_at(40)
