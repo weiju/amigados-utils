@@ -4,7 +4,7 @@ from PIL import Image
 import argparse
 import os
 
-from amigaos import png2image
+from amigados import png2image
 
 DESCRIPTION = """png2image - Amiga Image Converter
 

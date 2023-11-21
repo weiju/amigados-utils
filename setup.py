@@ -3,11 +3,11 @@ import re
 import codecs
 from setuptools import setup
 
-NAME = 'amigaos-utils'
-PACKAGES = ['amigaos']
-DESCRIPTION = 'amigaos-utils is a collection of utilities for Amiga system development'
+NAME = 'amigados-utils'
+PACKAGES = ['amigados']
+DESCRIPTION = 'amigados-utils is a collection of utilities for Amiga system development'
 LICENSE = 'GPL V3'
-URI = 'https://github.com/weiju/amigaos-utils'
+URI = 'https://github.com/weiju/amigados-utils'
 AUTHOR = 'Wei-ju Wu'
 VERSION = '0.1.0'
 
@@ -31,7 +31,7 @@ CLASSIFIERS = [
 INSTALL_REQUIRES = ['pillow', 'Jinja2']
 
 PACKAGE_DATA = {
-    'amigaos': []
+    'amigados': []
 }
 
 if __name__ == '__main__':
@@ -49,6 +49,6 @@ if __name__ == '__main__':
           classifiers=CLASSIFIERS,
           install_requires=INSTALL_REQUIRES,
           include_package_data=True, package_data=PACKAGE_DATA,
-          scripts=['bin/amigaos-png2image', 'bin/amigaos-fdtool',
-                   'bin/amigaos-dalf',
-                   'bin/amigaos-bumprev', 'bin/amigaos-dir'])
+          scripts=['bin/amigados-png2image', 'bin/amigados-fdtool',
+                   'bin/amigados-dalf',
+                   'bin/amigados-bumprev', 'bin/amigados-dir'])

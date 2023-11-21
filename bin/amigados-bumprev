@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 
-from amigaos import bumprev
+from amigados import bumprev
 
 
 if __name__ == '__main__':

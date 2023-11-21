@@ -5,7 +5,7 @@
 import unittest
 import xmlrunner
 import sys
-from amigaos.adftools import util
+from amigados.adftools import util
 
 
 class ADFToolsUtilTest(unittest.TestCase):  # pylint: disable-msg=R0904
