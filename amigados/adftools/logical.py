@@ -166,7 +166,6 @@ class HeaderBlock:
         sector = self.sector()
         for i in range(self.high_seq()):
             datablock_num = sector.u32_at((self.block_size() - DATABLOCK_OFFSET) - (i * 4))
-            #data_block = self.data_block_at(datablock_num)
             result.append(datablock_num)
         return result
 
@@ -197,6 +196,9 @@ class DataBlock:
 
     def sector(self):
         return self.physical_volume().sector(self.blocknum)
+
+    def block_size(self):
+        return self.sector().size_in_bytes()
 
     def data(self):
         return self.sector().data
@@ -265,10 +267,15 @@ class LogicalVolume:
                 result.extend(data_block.data()[24:24+data_block.data_size()])
 
         elif self.filesystem_type() == 'FFS':
-            print("FFS DATA")
-            # TODO: data_blocks only contain data, no size
+            # data_blocks only contain data, no size
             for i in data_blocks:
-                pass
+                data_block = self.data_block_at(i)
+                if remain_size >= data_block.block_size():
+                    result.extend(data_block.data())
+                    remain_size -= data_block.block_size()
+                else:
+                    result.extend(data_block.data()[0:remain_size])
+                    remain_size = 0
         else:
             raise Exception("Unsupported file system type: %s" % self.filesystem_type())
         return result
