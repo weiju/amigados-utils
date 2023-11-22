@@ -47,10 +47,7 @@ if __name__ == '__main__':
             print("/")
             list_dir(volume, root_block)
         else:
-            cur_header = root_block
-            for pathcomp in path:
-                #cur_header = find_header(volume, cur_header, pathcomp)
-                cur_header = cur_header.find_header(pathcomp)
+            cur_header = volume.header_for_path('/'.join(path))
             if cur_header.is_directory():
                 list_dir(volume, cur_header)
             else:

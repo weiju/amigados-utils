@@ -181,10 +181,20 @@ class LogicalVolume:
         return BootBlock(self)
 
     def root_block(self):
+        """returns the root block of this logical volume
+
+        TODO: this works for disks, but might not for HDFs, because
+           1. they can have any size
+           2. we should look at the root block number inside the boot block
+        """
         return RootBlock(self, int(self.physical_volume.num_sectors() / 2))
 
     def header_block_at(self, sector_num):
         return HeaderBlock(self, sector_num)
 
     def header_for_path(self, path):
-        pass
+        path = [p for p in path.split("/") if p != '']
+        cur_header = self.root_block()
+        for pathcomp in path:
+            cur_header = cur_header.find_header(pathcomp)
+        return cur_header
