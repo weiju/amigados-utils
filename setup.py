@@ -50,5 +50,5 @@ if __name__ == '__main__':
           install_requires=INSTALL_REQUIRES,
           include_package_data=True, package_data=PACKAGE_DATA,
           scripts=['bin/amigados-png2image', 'bin/amigados-fdtool',
-                   'bin/amigados-dalf',
-                   'bin/amigados-bumprev', 'bin/amigados-dir'])
+                   'bin/amigados-dalf', 'bin/amigados-bumprev',
+                   'bin/amigados-dir', 'bin/amigados-copy'])

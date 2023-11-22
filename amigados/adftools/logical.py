@@ -7,15 +7,8 @@ BOOT_BLOCK_FLAG_FFS               = 1
 BOOT_BLOCK_FLAG_INTL_ONLY         = 2
 BOOT_BLOCK_FLAG_DIRCACHE_AND_INTL = 4
 
-OFFSET_ROOTBLOCK_NUMBER = 8
-DDD_ROOT_BLOCK_NUMBER   = 880
-DDD_BITMAP_BLOCK_NUMBER = 881
-
-# for root block
-MAX_BITMAP_BLOCKS = 25
-
-BLOCK_TYPE_HEADER   = 2
-BLOCK_SEC_TYPE_ROOT = 1
+BLOCK_SEC_TYPE_DIR  = 2
+BLOCK_SEC_TYPE_FILE = -3
 
 class BootBlock:
     """The Boot block in an Amiga DOS volume.
@@ -26,7 +19,7 @@ class BootBlock:
 
     def block_size(self):
         # TODO: this is currently hardcoded to double density disks
-        return physical.DDD_BYTES_PER_SECTOR * physical.DDD_TRACKS_PER_CYLINDER
+        return physical.FLOPPY_BYTES_PER_SECTOR * physical.FLOPPY_TRACKS_PER_CYLINDER
 
     def data(self):
         return self.logical_volume.physical_volume.data[0:self.block_size()]
@@ -90,7 +83,7 @@ class HeaderBlock:
         return sector.i32_at(sector.size_in_bytes() - 4)
 
     def is_directory(self):
-        return self.secondary_type() == 2
+        return self.secondary_type() == BLOCK_SEC_TYPE_DIR
 
     def name(self):
         sector = self.sector()
@@ -135,6 +128,29 @@ class HeaderBlock:
     def bitmap_flag(self):
         return self.sector().i32_at(self.block_size() - 200)
 
+    # Directory only
+    def find_header(self, filename):
+        hash_index = util.compute_hash(filename, self.block_size())
+        sector_num = self.hashtable_entry_at(hash_index)
+        header = self.logical_volume.header_block_at(sector_num)
+        if header.name().upper() != filename.upper():
+            # TODO follow hash chain
+            raise Exception("Hash collision, resolve by following next hash (TODO)")
+
+        return header
+
+    # File header block only
+    def file_comment(self):
+        sector = self.sector()
+        comm_len = sector[self.block_size() - 184]
+        result = ""
+        for i in range(comm_len):
+            result += chr(sector[self.block_size() - 183 + i])
+        return result
+
+    def high_seq(self):
+        return self.sector().u32_at(8)
+
 
 class RootBlock(HeaderBlock):
     """A logical view on the root block, a special header block, which is at a
@@ -165,8 +181,10 @@ class LogicalVolume:
         return BootBlock(self)
 
     def root_block(self):
-        return RootBlock(self, DDD_ROOT_BLOCK_NUMBER)
+        return RootBlock(self, int(self.physical_volume.num_sectors() / 2))
 
     def header_block_at(self, sector_num):
         return HeaderBlock(self, sector_num)
 
+    def header_for_path(self, path):
+        pass

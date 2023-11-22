@@ -39,9 +39,9 @@ HDD_SECTORS_PER_TRACK = 22
 HDD_SECTORS_TOTAL = FLOPPY_CYLINDERS_PER_DISK * FLOPPY_TRACKS_PER_CYLINDER * HDD_SECTORS_PER_TRACK
 HDD_IMAGE_SIZE = FLOPPY_BYTES_PER_SECTOR * HDD_SECTORS_TOTAL
 
-class DoubleDensityDisk:
+class FloppyDisk:
     def __init__(self):
-        self.data = bytearray(DDD_IMAGE_SIZE)
+        self.data = None
 
     def __getitem__(self, bytenum):
         return self.data[bytenum]
@@ -67,11 +67,28 @@ class DoubleDensityDisk:
     def write_image(file):
         file.write(self.data)
 
+class DoubleDensityDisk(FloppyDisk):
+    def __init__(self):
+        self.data = bytearray(DDD_IMAGE_SIZE)
 
-def read_ddd_image(file):
+    def num_sectors(self):
+        return DDD_SECTORS_TOTAL
+
+
+class HighDensityDisk(FloppyDisk):
+    def __init__(self):
+        self.data = bytearray(HDD_IMAGE_SIZE)
+
+    def num_sectors(self):
+        return HDD_SECTORS_TOTAL
+
+def read_adf_image(file):
     data = file.read()
-    if len(data) != DDD_IMAGE_SIZE:
+    if len(data) == DDD_IMAGE_SIZE:
+        result = DoubleDensityDisk()
+    elif len(data) == HDD_IMAGE_SIZE:
+        result = HighDensityDisk()
+    else:
         raise Exception("Wrong image size !!! (expected %d but was %d)" % (DDD_IMAGE_SIZE, len(data)))
-    result = DoubleDensityDisk()
     result.data = data
     return result
