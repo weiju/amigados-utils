@@ -7,6 +7,9 @@ BOOT_BLOCK_FLAG_FFS               = 1
 BOOT_BLOCK_FLAG_INTL_ONLY         = 2
 BOOT_BLOCK_FLAG_DIRCACHE_AND_INTL = 4
 
+BLOCK_TYPE_HEADER = 2
+BLOCK_TYPE_DATA   = 8
+
 BLOCK_SEC_TYPE_DIR  = 2
 BLOCK_SEC_TYPE_FILE = -3
 
@@ -139,6 +142,7 @@ class HeaderBlock:
 
         return header
 
+    #################################
     # File header block only
     def file_comment(self):
         sector = self.sector()
@@ -149,7 +153,22 @@ class HeaderBlock:
         return result
 
     def high_seq(self):
+        """number of data block pointers"""
         return self.sector().u32_at(8)
+
+    def file_size(self):
+        return self.sector().u32_at(self.block_size() - 188)
+
+    def data_blocks(self):
+        """Returns all the data block numbers of this file
+        TODO: handle extension blocks for large files"""
+        result = []
+        sector = self.sector()
+        for i in range(self.high_seq()):
+            datablock_num = sector.u32_at((self.block_size() - DATABLOCK_OFFSET) - (i * 4))
+            #data_block = self.data_block_at(datablock_num)
+            result.append(datablock_num)
+        return result
 
 
 class RootBlock(HeaderBlock):
@@ -169,6 +188,34 @@ class RootBlock(HeaderBlock):
         return self._amigados_time_at(28)
 
 
+class DataBlock:
+    """A logical view on header blocks. Those are the first block of a directory
+    or file."""
+    def __init__(self, logical_volume, blocknum):
+        self.logical_volume = logical_volume
+        self.blocknum = blocknum
+
+    def sector(self):
+        return self.physical_volume().sector(self.blocknum)
+
+    def data(self):
+        return self.sector().data
+
+    def physical_volume(self):
+        return self.logical_volume.physical_volume
+
+    def block_type(self):
+        return self.sector().u32_at(0)
+
+    def seq_num(self):
+        return self.sector().u32_at(8)
+
+    def data_size(self):
+        return self.sector().u32_at(12)
+
+
+DATABLOCK_OFFSET = 204
+
 class LogicalVolume:
 
     def __init__(self, physical_volume):
@@ -176,6 +223,9 @@ class LogicalVolume:
 
     def initialize(self, fs_type="FFS", is_international=False, use_dircache=False):
         self.boot_block().initialize(fs_type, is_international, use_dircache)
+
+    def filesystem_type(self):
+        return self.boot_block().filesystem_type()
 
     def boot_block(self):
         return BootBlock(self)
@@ -192,9 +242,33 @@ class LogicalVolume:
     def header_block_at(self, sector_num):
         return HeaderBlock(self, sector_num)
 
+    def data_block_at(self, sector_num):
+        return DataBlock(self, sector_num)
+
     def header_for_path(self, path):
         path = [p for p in path.split("/") if p != '']
         cur_header = self.root_block()
         for pathcomp in path:
             cur_header = cur_header.find_header(pathcomp)
         return cur_header
+
+    def file_data(self, path):
+        result = bytearray()
+        file_header = self.header_for_path(path)
+        data_blocks = file_header.data_blocks()
+        remain_size = file_header.file_size()
+        # Now concatenate the data from the data blocks. Be aware that OFS
+        # and FFS data blocks have different formats
+        if self.filesystem_type() == 'OFS':
+            for i in data_blocks:
+                data_block = self.data_block_at(i)
+                result.extend(data_block.data()[24:24+data_block.data_size()])
+
+        elif self.filesystem_type() == 'FFS':
+            print("FFS DATA")
+            # TODO: data_blocks only contain data, no size
+            for i in data_blocks:
+                pass
+        else:
+            raise Exception("Unsupported file system type: %s" % self.filesystem_type())
+        return result

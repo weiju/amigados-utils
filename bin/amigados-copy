@@ -35,9 +35,7 @@ if __name__ == '__main__':
         with open(src[0], "rb") as infile:
             disk = physical.read_adf_image(infile)
             volume = logical.LogicalVolume(disk)
-            root_block = volume.root_block()
-            file_header = volume.header_for_path(src[1])
-            print("got file: '%s'" % file_header.name())
+            data = volume.file_data(src[1])
     else:
         # source is host system path
         if not os.path.exists(src[0]):
@@ -54,13 +52,5 @@ if __name__ == '__main__':
             exit(1)
     else:
         # destination is host system path
-        pass
-
-    """
-    path = args.path.split("/")
-    path = [p for p in path if p != '']
-    with open(args.adf, "rb") as infile:
-        disk = physical.read_ddd_image(infile)
-        volume = logical.LogicalVolume(disk)
-        root_block = volume.root_block()
-    """
+        with open(dst[0], "wb") as outfile:
+            outfile.write(data)
