@@ -25,9 +25,9 @@ def list_dir(volume, header_block):
 
 
 if __name__ == '__main__':
-    description = """adu-dir - Python implementation of AmigaDOS dir"""
+    description = """amigados-dir - Python implementation of AmigaDOS dir"""
     parser = argparse.ArgumentParser(description=description)
-    parser.add_argument('adf', help="ADFFile")
+    parser.add_argument('adf', help="ADF File")
     parser.add_argument('path', nargs="?", default="/", help="path (optional)")
     args = parser.parse_args()
     path = args.path.split("/")

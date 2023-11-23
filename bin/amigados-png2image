@@ -6,7 +6,7 @@ import os
 
 from amigados import png2image
 
-DESCRIPTION = """png2image - Amiga Image Converter
+DESCRIPTION = """amigados-png2image - Amiga Image Converter
 
 This tool converts a PNG image to a C header file containing image
 information in planar format. Optionally it generates the data

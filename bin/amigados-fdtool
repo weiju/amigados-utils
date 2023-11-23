@@ -5,7 +5,7 @@ from amigados import fdtool
 
 
 if __name__ == '__main__':
-    description = """fdtool - stub generator for Amiga FD files (c) 2013-2023"""
+    description = """amigados-fdtool - stub generator for Amiga FD files (c) 2013-2023"""
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument('infile', help="FD input file")
     args = parser.parse_args()

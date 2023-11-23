@@ -6,10 +6,10 @@ from setuptools import setup
 NAME = 'amigados-utils'
 PACKAGES = ['amigados']
 DESCRIPTION = 'amigados-utils is a collection of utilities for Amiga system development'
-LICENSE = 'GPL V3'
+LICENSE = 'BSD'
 URI = 'https://github.com/weiju/amigados-utils'
 AUTHOR = 'Wei-ju Wu'
-VERSION = '0.1.0'
+VERSION = '0.1.1'
 
 KEYWORDS = ['amiga', 'system', 'development', 'classic', 'ecs', 'aga']
 
@@ -34,6 +34,8 @@ PACKAGE_DATA = {
     'amigados': []
 }
 
+DESCRIPTION = "A collection of command line tools for Amiga software development"
+
 if __name__ == '__main__':
     setup(name=NAME, description=DESCRIPTION,
           license=LICENSE,
@@ -43,6 +45,7 @@ if __name__ == '__main__':
           author_email='weiju.wu@gmail.com',
           maintainer=AUTHOR,
           maintainer_email='weiju.wu@gmail.com',
+          description=DESCRIPTION,
           keywords=KEYWORDS,
           packages=PACKAGES,
           zip_safe=False,
@@ -51,4 +54,5 @@ if __name__ == '__main__':
           include_package_data=True, package_data=PACKAGE_DATA,
           scripts=['bin/amigados-png2image', 'bin/amigados-fdtool',
                    'bin/amigados-dalf', 'bin/amigados-bumprev',
-                   'bin/amigados-dir', 'bin/amigados-copy'])
+                   'bin/amigados-dir', 'bin/amigados-copy',
+                   'bin/amigados-makedir', 'bin/amigados-createdisk'])

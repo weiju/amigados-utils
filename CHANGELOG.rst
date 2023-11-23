@@ -1,7 +1,7 @@
 Changes
 =======
 
-Version 0.1.0, 2023/11/20
+Version 0.1.0, 2023/11/22
 -------------------------
 
-Initial PyPI version
+* Initial PyPI version

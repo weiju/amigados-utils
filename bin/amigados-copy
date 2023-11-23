@@ -15,7 +15,7 @@ from amigados.adftools import logical, physical, util
 
 
 if __name__ == '__main__':
-    description = """adu-dir - Python implementation of AmigaDOS dir"""
+    description = """amigados-copy - Python implementation of AmigaDOS copy"""
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument('source', help="source path")
     parser.add_argument('dest', help="destination path")

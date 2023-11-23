@@ -6,7 +6,7 @@ from amigados.hunktools import dalf
 
 
 if __name__ == '__main__':
-    description = """dalf.py - Dumps Amiga Load Files with Python (c) 2014-2023 Wei-ju Wu"""
+    description = """amigados-dalf - Dumps Amiga Load Files with Python (c) 2014-2023 Wei-ju Wu"""
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument('hunkfile', help="hunk format file")
     parser.add_argument('--disassemble', action="store_true", default=False,

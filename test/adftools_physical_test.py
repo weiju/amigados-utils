@@ -20,7 +20,7 @@ class ADFToolsPhysicalTest(unittest.TestCase):  # pylint: disable-msg=R0904
         disk = physical.DoubleDensityDisk()
         sector0 = disk.sector(0)
         disk[0] = 23
-        self.assertEqual(physical.DDD_BYTES_PER_SECTOR, sector0.size_in_bytes())
+        self.assertEqual(physical.FLOPPY_BYTES_PER_SECTOR, sector0.size_in_bytes())
         self.assertEqual(23, disk[0])
         self.assertEqual(23, sector0[0])
 

@@ -1,0 +1,12 @@
+#!/usr/bin/env python3
+import argparse
+
+from amigados.adftools import logical, physical, util
+
+if __name__ == '__main__':
+    description = """amigados-createdisk - Create an AmigaDOS disk image"""
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument('adf', help="ADF File")
+    parser.add_argument('--filesystem', default="OFS",
+                        help="File system type")
+    args = parser.parse_args()

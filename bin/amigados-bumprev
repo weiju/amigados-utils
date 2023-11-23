@@ -5,7 +5,7 @@ from amigados import bumprev
 
 
 if __name__ == '__main__':
-    description = """amu-bumprev - Python implementation of Amiga BumpRev"""
+    description = """amigados-bumprev - Python implementation of Amiga BumpRev"""
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument('version', help="version")
     parser.add_argument('appname', help="application name")

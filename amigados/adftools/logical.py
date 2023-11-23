@@ -7,11 +7,25 @@ BOOT_BLOCK_FLAG_FFS               = 1
 BOOT_BLOCK_FLAG_INTL_ONLY         = 2
 BOOT_BLOCK_FLAG_DIRCACHE_AND_INTL = 4
 
-BLOCK_TYPE_HEADER = 2
-BLOCK_TYPE_DATA   = 8
+# Special blocks
+BLOCK_ID_BOOT       = "DOS"
+BLOCK_ID_RIGID_DISK = "RDSK"
+BLOCK_ID_BAD_BLOCK  = "BADB"
+BLOCK_ID_PARTITION  = "PART"
+BLOCK_ID_FILESSYS   = "FSHD"
+BLOCK_ID_LOADSEG    = "LSEG"
 
-BLOCK_SEC_TYPE_DIR  = 2
-BLOCK_SEC_TYPE_FILE = -3
+BLOCK_TYPE_HEADER   = 2
+BLOCK_TYPE_DATA     = 8
+BLOCK_TYPE_LIST     = 16
+BLOCK_TYPE_DIRCACHE = 33
+
+BLOCK_SEC_TYPE_ROOT     = 1
+BLOCK_SEC_TYPE_USERDIR  = 2
+BLOCK_SEC_TYPE_SOFTLINK = 3
+BLOCK_SEC_TYPE_LINKDIR  = 4
+BLOCK_SEC_TYPE_FILE     = -3
+BLOCK_SEC_TYPE_LINKFILE = -4
 
 class BootBlock:
     """The Boot block in an Amiga DOS volume.
@@ -86,7 +100,7 @@ class HeaderBlock:
         return sector.i32_at(sector.size_in_bytes() - 4)
 
     def is_directory(self):
-        return self.secondary_type() == BLOCK_SEC_TYPE_DIR
+        return self.secondary_type() == BLOCK_SEC_TYPE_USERDIR
 
     def name(self):
         sector = self.sector()

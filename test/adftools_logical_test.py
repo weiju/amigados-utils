@@ -30,7 +30,7 @@ class ADFToolsLogicalTest(unittest.TestCase):  # pylint: disable-msg=R0904
     def test_read_wbdisk(self):
         """read WB disk"""
         with open("testdata/wbench1.3.adf", "rb") as infile:
-            disk = physical.read_ddd_image(infile)
+            disk = physical.read_adf_image(infile)
         volume = logical.LogicalVolume(disk)
 
         # Boot block
