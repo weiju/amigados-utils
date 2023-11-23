@@ -1,6 +1,7 @@
 import os
 import re
-import codecs
+
+from pathlib import Path
 from setuptools import setup
 
 NAME = 'amigados-utils'
@@ -34,10 +35,14 @@ PACKAGE_DATA = {
     'amigados': []
 }
 
-DESCRIPTION = "A collection of command line tools for Amiga software development"
+this_directory = Path(__file__).parent
+long_description = (this_directory / "README.md").read_text()
 
 if __name__ == '__main__':
-    setup(name=NAME, description=DESCRIPTION,
+    setup(name=NAME,
+          description=DESCRIPTION,
+          long_description=long_description,
+          long_description_content_type='text/markdown',
           license=LICENSE,
           url=URI,
           version=VERSION,
@@ -45,7 +50,6 @@ if __name__ == '__main__':
           author_email='weiju.wu@gmail.com',
           maintainer=AUTHOR,
           maintainer_email='weiju.wu@gmail.com',
-          description=DESCRIPTION,
           keywords=KEYWORDS,
           packages=PACKAGES,
           zip_safe=False,
