@@ -27,12 +27,20 @@ BLOCK_SEC_TYPE_LINKDIR  = 4
 BLOCK_SEC_TYPE_FILE     = -3
 BLOCK_SEC_TYPE_LINKFILE = -4
 
-class BootBlock:
+class DiskBlock:
+    def __init__(self, logical_volume):
+        self.logical_volume = logical_volume
+
+    def physical_volume(self):
+        return self.logical_volume.physical_volume
+
+
+class BootBlock(DiskBlock):
     """The Boot block in an Amiga DOS volume.
     It stores information about the file system and a checksum of this block
     """
     def __init__(self, logical_volume):
-        self.logical_volume = logical_volume
+        super().__init__(logical_volume)
 
     def block_size(self):
         # TODO: this is currently hardcoded to double density disks
@@ -40,9 +48,6 @@ class BootBlock:
 
     def data(self):
         return self.logical_volume.physical_volume.data[0:self.block_size()]
-
-    def physical_volume(self):
-        return self.logical_volume.physical_volume
 
     def initialize(self, fs_type, is_international=False, use_dircache=False):
         self.physical_volume()[0] = ord('D')
@@ -73,11 +78,11 @@ class BootBlock:
         return self.logical_volume.physical_volume.u32_at(4)
 
 
-class HeaderBlock:
+class HeaderBlock(DiskBlock):
     """A logical view on header blocks. Those are the first block of a directory
     or file."""
     def __init__(self, logical_volume, blocknum):
-        self.logical_volume = logical_volume
+        super().__init__(logical_volume)
         self.blocknum = blocknum
 
     def block_size(self):
@@ -88,9 +93,6 @@ class HeaderBlock:
 
     def data(self):
         return self.sector().data
-
-    def physical_volume(self):
-        return self.logical_volume.physical_volume
 
     def primary_type(self):
         return self.sector().u32_at(0)
@@ -201,27 +203,11 @@ class RootBlock(HeaderBlock):
         return self._amigados_time_at(28)
 
 
-class DataBlock:
+class DataBlock(HeaderBlock):
     """A logical view on header blocks. Those are the first block of a directory
     or file."""
     def __init__(self, logical_volume, blocknum):
-        self.logical_volume = logical_volume
-        self.blocknum = blocknum
-
-    def sector(self):
-        return self.physical_volume().sector(self.blocknum)
-
-    def block_size(self):
-        return self.sector().size_in_bytes()
-
-    def data(self):
-        return self.sector().data
-
-    def physical_volume(self):
-        return self.logical_volume.physical_volume
-
-    def block_type(self):
-        return self.sector().u32_at(0)
+        super().__init__(logical_volume, blocknum)
 
     def seq_num(self):
         return self.sector().u32_at(8)

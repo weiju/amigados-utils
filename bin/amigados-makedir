@@ -10,3 +10,13 @@ if __name__ == '__main__':
     parser.add_argument('adf', help="ADF File")
     parser.add_argument('path', help="path to create")
     args = parser.parse_args()
+
+    with open(args.adf, "rb") as infile:
+        disk = physical.read_adf_image(infile)
+        volume = logical.LogicalVolume(disk)
+        path = [p for p in args.path.split("/")]
+        parent_dir = volume.header_for_path('/'.join(path[:-1]))
+        # TODO:
+        # 1. reserve a dir header block and initialize it
+        #    this includes updating the bitmap
+        # 2. add the new header to the hash table of the dir block
