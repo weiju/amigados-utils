@@ -39,14 +39,13 @@ def bootblock_checksum(data, num_bytes):
     return ~result & 0xffffffff
 
 
-def headerblock_checksum(data, num_bytes):
+def headerblock_checksum(data, num_bytes, exclude_offset=20):
     """header block checksum function"""
     result = 0
     for i in range(0, num_bytes, 4):
         # ignore the checksum field itself for the computation
-        if i == 20:
+        if i == exclude_offset:
             continue
-
         d = struct.unpack(">I", data[i:i + 4])[0]
         result += d
 
@@ -56,6 +55,7 @@ def headerblock_checksum(data, num_bytes):
             result = result - 0xffffffff - 1
 
     return (-result) & 0xffffffff
+
 
 def compute_hash(name, block_size):
     """non-international hash function"""

@@ -21,4 +21,7 @@ if __name__ == '__main__':
         # 2. add the new header to the hash table of the dir block
         root_block = volume.root_block()
         free_blocks, used_blocks = root_block.block_allocation()
+        print(free_blocks, len(free_blocks))
         root_block.allocate_block(free_blocks[0])
+        free_blocks, used_blocks = root_block.block_allocation()
+        print(free_blocks, len(free_blocks))

@@ -210,16 +210,16 @@ class RootBlock(HeaderBlock):
             # we only need 1 bitmap block on a floppy disk
             bitmap_block = BitmapBlock(self.logical_volume, sector.u32_at(self.block_size() - 196))
             bm_sector = bitmap_block.sector()
-            checksum = bm_sector.u32_at(0)
             block_idx = 2
             free_blocks = []
             used_blocks = []
-            for i in range(int(bitmap_block.block_size() / 4) - 1):
+            for bytenum in range(4, bitmap_block.block_size(), 4):
+                l = bm_sector.u32_at(bytenum)
+
                 # don't try to check more than we have !!!
                 if block_idx > self.physical_volume().num_sectors():
                     break
 
-                l = bm_sector.u32_at(i + 1)
                 mask = 0x80000000
                 for i in range(32):
                     if (mask & l) == mask:
@@ -256,21 +256,29 @@ class BitmapBlock(DiskBlock):
     def data(self):
         return self.sector().data
 
+    def stored_checksum(self):
+        return self.sector().u32_at(0)
+
+    def computed_checksum(self):
+        return util.headerblock_checksum(self.data(), self.block_size(), exclude_offset=0)
+
     def mark_block_used(self, blocknum):
         # 1. determine the long word in the bitmap that contains the bit
         # 2. set the bit mask and do bitwise "and" with that long word and store it back
         # 3. update checksum
-        # TODO: unit test for this !!!
         wordnum = int((blocknum - 2) / 32)
+        bytenum = (wordnum + 1) * 4
         bitnum = (blocknum - 2) % 32
         # clear the bit by shifting + inverting
         mask = 0x80000000 >> bitnum
         mask ^= 0xffffffff
 
         sector = self.sector()
-        orig = sector.u32_at(wordnum + 1)
-        sector.set_u32_at(wordnum + 1, mask & orig)
-        # TODO: compute checksum
+        orig = sector.u32_at(bytenum)
+        sector.set_u32_at(bytenum, mask & orig)
+
+        # update checksum
+        sector.set_u32_at(0, self.computed_checksum())
 
 
 class DataBlock(HeaderBlock):
