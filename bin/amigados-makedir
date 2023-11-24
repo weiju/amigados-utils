@@ -16,7 +16,9 @@ if __name__ == '__main__':
         volume = logical.LogicalVolume(disk)
         path = [p for p in args.path.split("/")]
         parent_dir = volume.header_for_path('/'.join(path[:-1]))
-        # TODO:
         # 1. reserve a dir header block and initialize it
         #    this includes updating the bitmap
         # 2. add the new header to the hash table of the dir block
+        root_block = volume.root_block()
+        free_blocks, used_blocks = root_block.block_allocation()
+        root_block.allocate_block(free_blocks[0])

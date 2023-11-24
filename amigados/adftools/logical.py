@@ -202,6 +202,76 @@ class RootBlock(HeaderBlock):
     def last_filesys_modification_time(self):
         return self._amigados_time_at(28)
 
+    def block_allocation(self):
+        sector = self.sector()
+        bm_flag = sector.i32_at(self.block_size() - 200)
+        bm_pages = []
+        if bm_flag == -1:  # VALID
+            # we only need 1 bitmap block on a floppy disk
+            bitmap_block = BitmapBlock(self.logical_volume, sector.u32_at(self.block_size() - 196))
+            bm_sector = bitmap_block.sector()
+            checksum = bm_sector.u32_at(0)
+            block_idx = 2
+            free_blocks = []
+            used_blocks = []
+            for i in range(int(bitmap_block.block_size() / 4) - 1):
+                # don't try to check more than we have !!!
+                if block_idx > self.physical_volume().num_sectors():
+                    break
+
+                l = bm_sector.u32_at(i + 1)
+                mask = 0x80000000
+                for i in range(32):
+                    if (mask & l) == mask:
+                        free_blocks.append(block_idx)
+                    else:
+                        used_blocks.append(block_idx)
+                    mask >>= 1
+                    block_idx += 1
+                    if block_idx > self.physical_volume().num_sectors():
+                        break
+
+        return free_blocks, used_blocks
+
+    def allocate_block(self, blocknum):
+        free_blocks, used_blocks = self.block_allocation()
+        if not blocknum in free_blocks:
+            raise Exception("ERROR: can't allocate block %d - already used !!!" % blocknum)
+        # we only need 1 bitmap block on a floppy disk
+        bitmap_block = BitmapBlock(self.logical_volume, self.sector().u32_at(self.block_size() - 196))
+        bitmap_block.mark_block_used(blocknum)
+
+
+class BitmapBlock(DiskBlock):
+    def __init__(self, logical_volume, blocknum):
+        super().__init__(logical_volume)
+        self.blocknum = blocknum
+
+    def block_size(self):
+        return self.sector().size_in_bytes()
+
+    def sector(self):
+        return self.physical_volume().sector(self.blocknum)
+
+    def data(self):
+        return self.sector().data
+
+    def mark_block_used(self, blocknum):
+        # 1. determine the long word in the bitmap that contains the bit
+        # 2. set the bit mask and do bitwise "and" with that long word and store it back
+        # 3. update checksum
+        # TODO: unit test for this !!!
+        wordnum = int((blocknum - 2) / 32)
+        bitnum = (blocknum - 2) % 32
+        # clear the bit by shifting + inverting
+        mask = 0x80000000 >> bitnum
+        mask ^= 0xffffffff
+
+        sector = self.sector()
+        orig = sector.u32_at(wordnum + 1)
+        sector.set_u32_at(wordnum + 1, mask & orig)
+        # TODO: compute checksum
+
 
 class DataBlock(HeaderBlock):
     """A logical view on header blocks. Those are the first block of a directory

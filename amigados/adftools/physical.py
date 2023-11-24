@@ -3,8 +3,9 @@ import struct
 
 class Sector:
     """Sector is a partial view on a physical volume"""
-    def __init__(self, data):
+    def __init__(self, data, offset):
         self.data = data  # array of bytes
+        self.offset = offset
 
     def __getitem__(self, bytenum):
         return self.data[bytenum]
@@ -23,6 +24,9 @@ class Sector:
 
     def i32_at(self, bytenum):
         return struct.unpack(">i", self.data[bytenum:bytenum + 4])[0]
+
+    def set_u32_at(self, bytenum, value):
+        struct.pack_into(">I", self.data.obj, self.offset + bytenum, value)
 
 
 FLOPPY_CYLINDERS_PER_DISK = 80
@@ -62,10 +66,11 @@ class FloppyDisk:
         # slicing the bytearray creates an independent copy, but we want a
         # Sector be a view that writes to the underlying array, so we create
         # memoryview, and slice it to achive the dessired effect
-        return Sector(memoryview(self.data)[idx:idx + FLOPPY_BYTES_PER_SECTOR])
+        return Sector(memoryview(self.data)[idx:idx + FLOPPY_BYTES_PER_SECTOR], idx)
 
     def write_image(file):
         file.write(self.data)
+
 
 class DoubleDensityDisk(FloppyDisk):
     def __init__(self):
@@ -83,12 +88,15 @@ class HighDensityDisk(FloppyDisk):
         return HDD_SECTORS_TOTAL
 
 def read_adf_image(file):
+    filedata = bytearray()
     data = file.read()
+    filedata.extend(data)
+
     if len(data) == DDD_IMAGE_SIZE:
         result = DoubleDensityDisk()
     elif len(data) == HDD_IMAGE_SIZE:
         result = HighDensityDisk()
     else:
         raise Exception("Wrong image size !!! (expected %d but was %d)" % (DDD_IMAGE_SIZE, len(data)))
-    result.data = data
+    result.data = filedata
     return result
