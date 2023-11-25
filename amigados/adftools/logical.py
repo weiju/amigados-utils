@@ -27,13 +27,29 @@ BLOCK_SEC_TYPE_LINKDIR  = 4
 BLOCK_SEC_TYPE_FILE     = -3
 BLOCK_SEC_TYPE_LINKFILE = -4
 
-HEADER_BLOCK_HEADER_KEY = 4
-HEADER_BLOCK_CHECKSUM   = 20
+ROOT_BLOCK_OFFSET_HASHTABLE_SIZE  = 12
 
-HEADER_BLOCK_SIZE_OFFSET_SECTYPE = -4
-HEADER_BLOCK_SIZE_OFFSET_EXT     = -8
-HEADER_BLOCK_SIZE_OFFSET_PARENT  = -12
+ROOT_BLOCK_SIZE_OFFSET_BITMAP_FLAG           = -200
+ROOT_BLOCK_SIZE_OFFSET_BITMAP_PAGES          = -196
+ROOT_BLOCK_SIZE_OFFSET_LAST_DISK_ALTERATION  = -40
+ROOT_BLOCK_SIZE_OFFSET_FILESYS_CREATION_TIME = -28
 
+ROOT_BLOCK_VALID_BITMAP = -1
+
+HEADER_BLOCK_OFFSET_HEADER_KEY = 4
+HEADER_BLOCK_OFFSET_CHECKSUM   = 20
+
+HEADER_BLOCK_SIZE_OFFSET_LAST_MODIFIED = -92
+HEADER_BLOCK_SIZE_OFFSET_COMMENT_LEN   = -184
+HEADER_BLOCK_SIZE_OFFSET_COMMENT       = -183
+HEADER_BLOCK_SIZE_OFFSET_NAME_LEN      = -80
+HEADER_BLOCK_SIZE_OFFSET_NAME          = -79
+HEADER_BLOCK_SIZE_OFFSET_NEXT_HASH     = -16
+HEADER_BLOCK_SIZE_OFFSET_PARENT        = -12
+HEADER_BLOCK_SIZE_OFFSET_EXT           = -8
+HEADER_BLOCK_SIZE_OFFSET_SECTYPE       = -4
+
+BITMAP_BLOCK_OFFSET_CHECKSUM = 0
 
 class DiskBlock:
     def __init__(self, logical_volume):
@@ -114,7 +130,7 @@ class HeaderBlock(DiskBlock):
 
     def name(self):
         sector = self.sector()
-        soffset = sector.size_in_bytes() - 80
+        soffset = sector.size_in_bytes() + HEADER_BLOCK_SIZE_OFFSET_NAME_LEN
         slen = sector[soffset]
         result = ""
         for i in range(slen):
@@ -123,25 +139,33 @@ class HeaderBlock(DiskBlock):
 
     def _amigados_time_at(self, offset):
         sector = self.sector()
-        days = sector.i32_at(sector.size_in_bytes() - offset)
-        minutes = sector.i32_at(sector.size_in_bytes() - offset + 4)
-        ticks = sector.i32_at(sector.size_in_bytes() - offset + 8)
+        days = sector.i32_at(sector.size_in_bytes() + offset)
+        minutes = sector.i32_at(sector.size_in_bytes() + offset + 4)
+        ticks = sector.i32_at(sector.size_in_bytes() + offset + 8)
         return util.amigados_time_to_datetime(days, minutes, ticks)
 
     def last_modification_time(self):
-        return self._amigados_time_at(92)
+        return self._amigados_time_at(HEADER_BLOCK_SIZE_OFFSET_LAST_MODIFIED)
 
     def header_key(self):
-        return self.sector().u32_at(HEADER_BLOCK_HEADER_KEY)
+        return self.sector().u32_at(HEADER_BLOCK_OFFSET_HEADER_KEY)
 
     def stored_checksum(self):
-        return self.sector().u32_at(HEADER_BLOCK_CHECKSUM)
+        return self.sector().u32_at(HEADER_BLOCK_OFFSET_CHECKSUM)
 
     def computed_checksum(self):
         return util.headerblock_checksum(self.data(), self.block_size())
 
     def update_checksum(self):
-        self.sector().set_u32_at(HEADER_BLOCK_CHECKSUM, self.computed_checksum())
+        self.sector().set_u32_at(HEADER_BLOCK_OFFSET_CHECKSUM, self.computed_checksum())
+
+    def file_comment(self):
+        sector = self.sector()
+        comm_len = sector[self.block_size() + HEADER_BLOCK_SIZE_OFFSET_COMMENT_LEN]
+        result = ""
+        for i in range(comm_len):
+            result += chr(sector[self.block_size() + HEADER_BLOCK_SIZE_OFFSET_COMMENT + i])
+        return result
 
     #################################
     # Directory header block only
@@ -173,21 +197,13 @@ class HeaderBlock(DiskBlock):
         sector = self.sector()
         sector.clear_data()
         sector.set_u32_at(0, BLOCK_TYPE_HEADER)
-        sector.set_u32_at(HEADER_BLOCK_HEADER_KEY, self.blocknum)
+        sector.set_u32_at(HEADER_BLOCK_OFFSET_HEADER_KEY, self.blocknum)
 
         # at the end: update checksum
         self.update_checksum()
 
     #################################
     # File header block only
-    def file_comment(self):
-        sector = self.sector()
-        comm_len = sector[self.block_size() - 184]
-        result = ""
-        for i in range(comm_len):
-            result += chr(sector[self.block_size() - 183 + i])
-        return result
-
     def high_seq(self):
         """number of data block pointers"""
         return self.sector().u32_at(8)
@@ -214,23 +230,24 @@ class RootBlock(HeaderBlock):
         super().__init__(logical_volume, blocknum)
 
     def hashtable_size(self):
-        return self.sector().u32_at(12)
+        return self.sector().u32_at(ROOT_BLOCK_OFFSET_HASHTABLE_SIZE)
 
     def last_disk_modification_time(self):
-        return self._amigados_time_at(40)
+        return self._amigados_time_at(ROOT_BLOCK_SIZE_OFFSET_LAST_DISK_ALTERATION)
 
     def last_filesys_modification_time(self):
-        return self._amigados_time_at(28)
+        return self._amigados_time_at(ROOT_BLOCK_SIZE_OFFSET_FILESYS_CREATION_TIME)
 
     def bitmap_flag(self):
-        return self.sector().i32_at(self.block_size() - 200)
+        return self.sector().i32_at(self.block_size() + ROOT_BLOCK_SIZE_OFFSET_BITMAP_FLAG)
 
     def block_allocation(self):
         sector = self.sector()
         bm_pages = []
-        if self.bitmap_flag() == -1:  # VALID
+        if self.bitmap_flag() == ROOT_BLOCK_VALID_BITMAP:
             # we only need 1 bitmap block on a floppy disk
-            bitmap_block = BitmapBlock(self.logical_volume, sector.u32_at(self.block_size() - 196))
+            bitmap_block = BitmapBlock(self.logical_volume,
+                                       sector.u32_at(self.block_size() + ROOT_BLOCK_SIZE_OFFSET_BITMAP_PAGES))
             bm_sector = bitmap_block.sector()
             block_idx = 2
             free_blocks = []
@@ -260,7 +277,8 @@ class RootBlock(HeaderBlock):
         if not blocknum in free_blocks:
             raise Exception("ERROR: can't allocate block %d - already used !!!" % blocknum)
         # we only need 1 bitmap block on a floppy disk
-        bitmap_block = BitmapBlock(self.logical_volume, self.sector().u32_at(self.block_size() - 196))
+        bitmap_block = BitmapBlock(self.logical_volume,
+                                   self.sector().u32_at(self.block_size() + ROOT_BLOCK_SIZE_OFFSET_BITMAP_PAGES))
         bitmap_block.mark_block_used(blocknum)
 
 
@@ -279,10 +297,11 @@ class BitmapBlock(DiskBlock):
         return self.sector().data
 
     def stored_checksum(self):
-        return self.sector().u32_at(0)
+        return self.sector().u32_at(BITMAP_BLOCK_OFFSET_CHECKSUM)
 
     def computed_checksum(self):
-        return util.headerblock_checksum(self.data(), self.block_size(), exclude_offset=0)
+        return util.headerblock_checksum(self.data(), self.block_size(),
+                                         exclude_offset=BITMAP_BLOCK_OFFSET_CHECKSUM)
 
     def mark_block_used(self, blocknum):
         # 1. determine the long word in the bitmap that contains the bit
@@ -300,7 +319,7 @@ class BitmapBlock(DiskBlock):
         sector.set_u32_at(bytenum, mask & orig)
 
         # update checksum
-        sector.set_u32_at(0, self.computed_checksum())
+        sector.set_u32_at(BITMAP_BLOCK_OFFSET_CHECKSUM, self.computed_checksum())
 
 
 class DataBlock(HeaderBlock):
