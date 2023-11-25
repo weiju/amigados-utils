@@ -28,6 +28,10 @@ class Sector:
     def set_u32_at(self, bytenum, value):
         struct.pack_into(">I", self.data.obj, self.offset + bytenum, value)
 
+    def clear_data(self):
+        for i in range(self.size_in_bytes()):
+            self.data[i] = 0
+
 
 FLOPPY_CYLINDERS_PER_DISK = 80
 FLOPPY_BYTES_PER_SECTOR = 512

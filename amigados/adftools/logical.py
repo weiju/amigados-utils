@@ -27,6 +27,14 @@ BLOCK_SEC_TYPE_LINKDIR  = 4
 BLOCK_SEC_TYPE_FILE     = -3
 BLOCK_SEC_TYPE_LINKFILE = -4
 
+HEADER_BLOCK_HEADER_KEY = 4
+HEADER_BLOCK_CHECKSUM   = 20
+
+HEADER_BLOCK_SIZE_OFFSET_SECTYPE = -4
+HEADER_BLOCK_SIZE_OFFSET_EXT     = -8
+HEADER_BLOCK_SIZE_OFFSET_PARENT  = -12
+
+
 class DiskBlock:
     def __init__(self, logical_volume):
         self.logical_volume = logical_volume
@@ -124,7 +132,29 @@ class HeaderBlock(DiskBlock):
         return self._amigados_time_at(92)
 
     def header_key(self):
-        return self.sector().u32_at(4)
+        return self.sector().u32_at(HEADER_BLOCK_HEADER_KEY)
+
+    def stored_checksum(self):
+        return self.sector().u32_at(HEADER_BLOCK_CHECKSUM)
+
+    def computed_checksum(self):
+        return util.headerblock_checksum(self.data(), self.block_size())
+
+    def update_checksum(self):
+        self.sector().set_u32_at(HEADER_BLOCK_CHECKSUM, self.computed_checksum())
+
+    #################################
+    # Directory header block only
+
+    def find_header(self, filename):
+        hash_index = util.compute_hash(filename, self.block_size())
+        sector_num = self.hashtable_entry_at(hash_index)
+        header = self.logical_volume.header_block_at(sector_num)
+        if header.name().upper() != filename.upper():
+            # TODO follow hash chain
+            raise Exception("Hash collision, resolve by following next hash (TODO)")
+
+        return header
 
     def hashtable_size(self):
         """This is hard coded, because header blocks don't contain the size.
@@ -138,25 +168,15 @@ class HeaderBlock(DiskBlock):
                              (index, self.hashtable_size()))
         return sector.u32_at(24 + (index * 4))
 
-    def stored_checksum(self):
-        return self.sector().u32_at(20)
+    def init_directory(self, name):
+        """Initialize this block as a new directory block"""
+        sector = self.sector()
+        sector.clear_data()
+        sector.set_u32_at(0, BLOCK_TYPE_HEADER)
+        sector.set_u32_at(HEADER_BLOCK_HEADER_KEY, self.blocknum)
 
-    def computed_checksum(self):
-        return util.headerblock_checksum(self.data(), self.block_size())
-
-    def bitmap_flag(self):
-        return self.sector().i32_at(self.block_size() - 200)
-
-    # Directory only
-    def find_header(self, filename):
-        hash_index = util.compute_hash(filename, self.block_size())
-        sector_num = self.hashtable_entry_at(hash_index)
-        header = self.logical_volume.header_block_at(sector_num)
-        if header.name().upper() != filename.upper():
-            # TODO follow hash chain
-            raise Exception("Hash collision, resolve by following next hash (TODO)")
-
-        return header
+        # at the end: update checksum
+        self.update_checksum()
 
     #################################
     # File header block only
@@ -202,11 +222,13 @@ class RootBlock(HeaderBlock):
     def last_filesys_modification_time(self):
         return self._amigados_time_at(28)
 
+    def bitmap_flag(self):
+        return self.sector().i32_at(self.block_size() - 200)
+
     def block_allocation(self):
         sector = self.sector()
-        bm_flag = sector.i32_at(self.block_size() - 200)
         bm_pages = []
-        if bm_flag == -1:  # VALID
+        if self.bitmap_flag() == -1:  # VALID
             # we only need 1 bitmap block on a floppy disk
             bitmap_block = BitmapBlock(self.logical_volume, sector.u32_at(self.block_size() - 196))
             bm_sector = bitmap_block.sector()

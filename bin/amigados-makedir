@@ -14,14 +14,31 @@ if __name__ == '__main__':
     with open(args.adf, "rb") as infile:
         disk = physical.read_adf_image(infile)
         volume = logical.LogicalVolume(disk)
-        path = [p for p in args.path.split("/")]
-        parent_dir = volume.header_for_path('/'.join(path[:-1]))
+        path = [p for p in args.path.split("/") if len(p) > 0]
+        print(path)
+
+        # Can't create root directory
+        if len(path) == 0:
+            print("Can't create directory '/'")
+            exit(1)
+
+        # TODO: Check for valid paths
+        parent_dirpath = '/'.join(path[:-1])
+        parent_dir = volume.header_for_path(parent_dirpath)
+        dirname = path[0]
+        print("parent_dir: %s, dirname: %s" % (parent_dirpath, dirname))
+        print(parent_dir)
+
         # 1. reserve a dir header block and initialize it
         #    this includes updating the bitmap
         # 2. add the new header to the hash table of the dir block
         root_block = volume.root_block()
         free_blocks, used_blocks = root_block.block_allocation()
-        print(free_blocks, len(free_blocks))
-        root_block.allocate_block(free_blocks[0])
-        free_blocks, used_blocks = root_block.block_allocation()
-        print(free_blocks, len(free_blocks))
+        #print(free_blocks, len(free_blocks))
+        dirblock_num = free_blocks[0]
+        root_block.allocate_block(dirblock_num)
+        dirblock = volume.header_block_at(dirblock_num)
+        dirblock.init_directory(dirname)
+
+        #free_blocks, used_blocks = root_block.block_allocation()
+        #print(free_blocks, len(free_blocks))
