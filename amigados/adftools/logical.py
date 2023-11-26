@@ -139,10 +139,18 @@ class HeaderBlock(DiskBlock):
 
     def _amigados_time_at(self, offset):
         sector = self.sector()
-        days = sector.i32_at(sector.size_in_bytes() + offset)
-        minutes = sector.i32_at(sector.size_in_bytes() + offset + 4)
-        ticks = sector.i32_at(sector.size_in_bytes() + offset + 8)
+        days = sector.u32_at(sector.size_in_bytes() + offset)
+        minutes = sector.u32_at(sector.size_in_bytes() + offset + 4)
+        ticks = sector.u32_at(sector.size_in_bytes() + offset + 8)
         return util.amigados_time_to_datetime(days, minutes, ticks)
+
+    def _set_amigados_time_at(self, offset,
+                              days_since_1978, minutes_past_midnight,
+                              ticks):
+        sector = self.sector()
+        sector.set_u32_at(sector.size_in_bytes() + offset, days_since_1978)
+        sector.set_u32_at(sector.size_in_bytes() + offset + 4, minutes_past_midnight)
+        sector.set_u32_at(sector.size_in_bytes() + offset + 8, ticks)
 
     def last_modification_time(self):
         return self._amigados_time_at(HEADER_BLOCK_SIZE_OFFSET_LAST_MODIFIED)
@@ -192,14 +200,22 @@ class HeaderBlock(DiskBlock):
                              (index, self.hashtable_size()))
         return sector.u32_at(24 + (index * 4))
 
+    def set_name(self, name):
+        namelen = len(name)
+        sector = self.sector()
+        sector[self.block_size() + HEADER_BLOCK_SIZE_OFFSET_NAME_LEN] = namelen
+        for i in range(namelen):
+            sector[self.block_size() + HEADER_BLOCK_SIZE_OFFSET_NAME + i] = ord(name[i])
+
     def init_directory(self, name):
         """Initialize this block as a new directory block"""
         sector = self.sector()
         sector.clear_data()
         sector.set_u32_at(0, BLOCK_TYPE_HEADER)
         sector.set_u32_at(HEADER_BLOCK_OFFSET_HEADER_KEY, self.blocknum)
+        self.set_name(name)
+        # TODO: set last modified time
 
-        # at the end: update checksum
         self.update_checksum()
 
     #################################

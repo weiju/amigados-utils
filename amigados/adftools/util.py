@@ -21,6 +21,17 @@ def amigados_time_to_datetime(days_since_jan_1_78,
     return datetime.fromtimestamp((millis + AMIGADOS_BASE_MILLIS) / 1000)
 
 
+def datetime_to_amigados_time(dt):
+    basetime = datetime(1978, 1, 1)
+    days_since_1978_1_1 = (dt - basetime).days
+    # minutes past midnight
+    minutes_past_midnight = dt.hour * 60 + dt.minute
+    # ticks past last minute
+    millis = (dt.second * 1000 + int(dt.microsecond / 1000))
+    ticks_past_last_minute = int(millis / 20)
+    return (days_since_1978_1_1, minutes_past_midnight, ticks_past_last_minute)
+
+
 def bootblock_checksum(data, num_bytes):
     """bootblock checksum function"""
     result = 0

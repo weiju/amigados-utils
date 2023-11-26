@@ -40,5 +40,8 @@ if __name__ == '__main__':
         dirblock = volume.header_block_at(dirblock_num)
         dirblock.init_directory(dirname)
 
+        # TODO: update last modified time to file system
+
+        print("dirname: ", dirblock.name())
         #free_blocks, used_blocks = root_block.block_allocation()
         #print(free_blocks, len(free_blocks))
