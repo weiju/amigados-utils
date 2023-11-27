@@ -1,5 +1,6 @@
 """logical.py - Logical view on an Amiga disk"""
 
+from datetime import datetime
 from . import physical
 from . import util
 
@@ -38,6 +39,7 @@ ROOT_BLOCK_VALID_BITMAP = -1
 
 HEADER_BLOCK_OFFSET_HEADER_KEY = 4
 HEADER_BLOCK_OFFSET_CHECKSUM   = 20
+HEADER_BLOCK_OFFSET_HASHTABLE  = 24
 
 HEADER_BLOCK_SIZE_OFFSET_LAST_MODIFIED = -92
 HEADER_BLOCK_SIZE_OFFSET_COMMENT_LEN   = -184
@@ -155,6 +157,12 @@ class HeaderBlock(DiskBlock):
     def last_modification_time(self):
         return self._amigados_time_at(HEADER_BLOCK_SIZE_OFFSET_LAST_MODIFIED)
 
+    def update_last_modification_time(self):
+        now = datetime.now()
+        days, minutes, ticks = util.datetime_to_amigados_time(now)
+        self._set_amigados_time_at(HEADER_BLOCK_SIZE_OFFSET_LAST_MODIFIED,
+                                   days, minutes, ticks)
+
     def header_key(self):
         return self.sector().u32_at(HEADER_BLOCK_OFFSET_HEADER_KEY)
 
@@ -174,6 +182,13 @@ class HeaderBlock(DiskBlock):
         for i in range(comm_len):
             result += chr(sector[self.block_size() + HEADER_BLOCK_SIZE_OFFSET_COMMENT + i])
         return result
+
+    def parent(self):
+        return self.sector().u32_at(self.block_size() + HEADER_BLOCK_SIZE_OFFSET_PARENT)
+
+    def set_parent(self, blocknum):
+        return self.sector().set_u32_at(self.block_size() + HEADER_BLOCK_SIZE_OFFSET_PARENT,
+                                        blocknum)
 
     #################################
     # Directory header block only
@@ -198,7 +213,15 @@ class HeaderBlock(DiskBlock):
         if index > self.hashtable_size():
             raise IndexError("Index out of bounds: %d, hash table size: %d" %
                              (index, self.hashtable_size()))
-        return sector.u32_at(24 + (index * 4))
+        return sector.u32_at(HEADER_BLOCK_OFFSET_HASHTABLE + (index * 4))
+
+    def set_hashtable_entry_at(self, index, blocknum):
+        sector = self.sector()
+        if index > self.hashtable_size():
+            raise IndexError("Index out of bounds: %d, hash table size: %d" %
+                             (index, self.hashtable_size()))
+        sector.set_u32_at(HEADER_BLOCK_OFFSET_HASHTABLE + (index * 4),
+                          blocknum)
 
     def set_name(self, name):
         namelen = len(name)
@@ -207,15 +230,17 @@ class HeaderBlock(DiskBlock):
         for i in range(namelen):
             sector[self.block_size() + HEADER_BLOCK_SIZE_OFFSET_NAME + i] = ord(name[i])
 
-    def init_directory(self, name):
+    def init_directory(self, name, parent_block):
         """Initialize this block as a new directory block"""
         sector = self.sector()
         sector.clear_data()
         sector.set_u32_at(0, BLOCK_TYPE_HEADER)
         sector.set_u32_at(HEADER_BLOCK_OFFSET_HEADER_KEY, self.blocknum)
+        sector.set_u32_at(self.block_size() + HEADER_BLOCK_SIZE_OFFSET_SECTYPE,
+                          BLOCK_SEC_TYPE_USERDIR)
         self.set_name(name)
-        # TODO: set last modified time
-
+        self.set_parent(parent_block)
+        self.update_last_modification_time()
         self.update_checksum()
 
     #################################
@@ -251,7 +276,13 @@ class RootBlock(HeaderBlock):
     def last_disk_modification_time(self):
         return self._amigados_time_at(ROOT_BLOCK_SIZE_OFFSET_LAST_DISK_ALTERATION)
 
-    def last_filesys_modification_time(self):
+    def update_last_disk_modification_time(self):
+        now = datetime.now()
+        days, minutes, ticks = util.datetime_to_amigados_time(now)
+        self._set_amigados_time_at(ROOT_BLOCK_SIZE_OFFSET_LAST_DISK_ALTERATION,
+                                   days, minutes, ticks)
+
+    def filesys_creation_time(self):
         return self._amigados_time_at(ROOT_BLOCK_SIZE_OFFSET_FILESYS_CREATION_TIME)
 
     def bitmap_flag(self):
