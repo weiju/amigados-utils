@@ -466,3 +466,37 @@ class LogicalVolume:
         else:
             raise Exception("Unsupported file system type: %s" % self.filesystem_type())
         return result
+
+    def makedir(self, pathstr):
+        path = [p for p in pathstr.split("/") if len(p) > 0]
+
+        # Can't create root directory
+        if len(path) == 0:
+            raise Exception("Can't create directory '/'")
+
+        # TODO: Check for valid paths
+        parent_dirpath = '/'.join(path[:-1])
+        parent_dir = self.header_for_path(parent_dirpath)
+        dirname = path[0]
+
+        # 1. reserve a dir header block and initialize it
+        #    this includes updating the bitmap
+        # 2. add the new header to the hash table of the dir block
+        root_block = self.root_block()
+        free_blocks, used_blocks = root_block.block_allocation()
+        dirblock_num = free_blocks[0]
+        root_block.allocate_block(dirblock_num)
+        dirblock = self.header_block_at(dirblock_num)
+        dirblock.init_directory(dirname, parent_dir.blocknum)
+
+        # 3. hook the block into the parent directory's hashtable
+        # and make sure the parent is hooked up, too
+        hash_index = util.compute_hash(dirname, dirblock.block_size())
+        parent_dir.append_hashtable_entry_at(hash_index, dirblock_num)
+
+        # 4. update last modified time to file system
+        # 5. if root was parent directory, update the time, too
+        # 6. update the checksums for parent and root block
+        parent_dir.update_last_modification_time()
+        root_block.update_last_disk_modification_time()
+        parent_dir.update_checksum()
