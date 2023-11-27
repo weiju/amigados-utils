@@ -39,17 +39,11 @@ if __name__ == '__main__':
         # 3. hook the block into the parent directory's hashtable
         # and make sure the parent is hooked up, too
         hash_index = util.compute_hash(dirname, dirblock.block_size())
-        entry_block = parent_dir.hashtable_entry_at(hash_index)
-        if entry_block == 0:
-            parent_dir.set_hashtable_entry_at(hash_index, dirblock_num)
-        else:
-            # TODO: get the first empty hashtable entry and add it to the
-            # end of the "next_hash" chain
-            raise Exception("TODO: hash entry exists, add link")
+        parent_dir.append_hashtable_entry_at(hash_index, dirblock_num)
 
-        # 1. update last modified time to file system
-        # 2. if root was parent directory, update the time, too
-        # 3. update the checksums for parent and root block
+        # 4. update last modified time to file system
+        # 5. if root was parent directory, update the time, too
+        # 6. update the checksums for parent and root block
         parent_dir.update_last_modification_time()
         root_block.update_last_disk_modification_time()
         parent_dir.update_checksum()

@@ -193,7 +193,7 @@ class HeaderBlock(DiskBlock):
     def next_hash(self):
         return self.sector().u32_at(self.block_size() + HEADER_BLOCK_SIZE_OFFSET_NEXT_HASH)
 
-    def set_next_hash(self, ht_index):
+    def set_next_hash(self, blocknum):
         return self.sector().set_u32_at(self.block_size() + HEADER_BLOCK_SIZE_OFFSET_NEXT_HASH,
                                         blocknum)
 
@@ -207,8 +207,7 @@ class HeaderBlock(DiskBlock):
         while (header.name().upper() != filename.upper() and
                header.next_hash() != 0):
             # follow hash chain
-            next_sector_num = self.hashtable_entry_at(header.next_hash())
-            header = self.logical_volume.header_block_at(next_sector_num)
+            header = self.logical_volume.header_block_at(header.next_hash())
         if header.name().upper() != filename.upper():
             raise Exception("can't find file/dir '%s'" % filename)
 
@@ -226,15 +225,26 @@ class HeaderBlock(DiskBlock):
                              (index, self.hashtable_size()))
         return sector.u32_at(HEADER_BLOCK_OFFSET_HASHTABLE + (index * 4))
 
-    def set_hashtable_entry_at(self, index, blocknum):
+    def append_hashtable_entry_at(self, index, blocknum):
+        """add block number to the bucket at the specified hash table index"""
         sector = self.sector()
         if index > self.hashtable_size():
             raise IndexError("Index out of bounds: %d, hash table size: %d" %
                              (index, self.hashtable_size()))
-        sector.set_u32_at(HEADER_BLOCK_OFFSET_HASHTABLE + (index * 4),
-                          blocknum)
+        cur_blocknum = sector.u32_at(HEADER_BLOCK_OFFSET_HASHTABLE + (index * 4))
+        if cur_blocknum == 0:  # no collisions
+            sector.set_u32_at(HEADER_BLOCK_OFFSET_HASHTABLE + (index * 4),
+                              blocknum)
+        else:
+            # collision -> append blocknum to end of chain
+            curblock = self.logical_volume.header_block_at(cur_blocknum)
+            while curblock.next_hash() != 0:
+                curblock = self.logical_volume.header_block_at(curblock.next_hash())
+            curblock.set_next_hash(blocknum)
 
-    def set_name(self, name):
+    def _set_name(self, name):
+        """Sets the name field in the block. Never use this directly,
+        since it can change the hash value of this block"""
         namelen = len(name)
         sector = self.sector()
         sector[self.block_size() + HEADER_BLOCK_SIZE_OFFSET_NAME_LEN] = namelen
@@ -249,7 +259,7 @@ class HeaderBlock(DiskBlock):
         sector.set_u32_at(HEADER_BLOCK_OFFSET_HEADER_KEY, self.blocknum)
         sector.set_u32_at(self.block_size() + HEADER_BLOCK_SIZE_OFFSET_SECTYPE,
                           BLOCK_SEC_TYPE_USERDIR)
-        self.set_name(name)
+        self._set_name(name)
         self.set_parent(parent_block)
         self.update_last_modification_time()
         self.update_checksum()
