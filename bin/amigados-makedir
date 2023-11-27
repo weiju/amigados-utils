@@ -43,6 +43,8 @@ if __name__ == '__main__':
         if entry_block == 0:
             parent_dir.set_hashtable_entry_at(hash_index, dirblock_num)
         else:
+            # TODO: get the first empty hashtable entry and add it to the
+            # end of the "next_hash" chain
             raise Exception("TODO: hash entry exists, add link")
 
         # 1. update last modified time to file system

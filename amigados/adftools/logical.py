@@ -69,7 +69,7 @@ class BootBlock(DiskBlock):
         super().__init__(logical_volume)
 
     def block_size(self):
-        # TODO: this is currently hardcoded to double density disks
+        # TODO: this is currently hardcoded to floppy disks
         return physical.FLOPPY_BYTES_PER_SECTOR * physical.FLOPPY_TRACKS_PER_CYLINDER
 
     def data(self):
@@ -190,6 +190,13 @@ class HeaderBlock(DiskBlock):
         return self.sector().set_u32_at(self.block_size() + HEADER_BLOCK_SIZE_OFFSET_PARENT,
                                         blocknum)
 
+    def next_hash(self):
+        return self.sector().u32_at(self.block_size() + HEADER_BLOCK_SIZE_OFFSET_NEXT_HASH)
+
+    def set_next_hash(self, ht_index):
+        return self.sector().set_u32_at(self.block_size() + HEADER_BLOCK_SIZE_OFFSET_NEXT_HASH,
+                                        blocknum)
+
     #################################
     # Directory header block only
 
@@ -197,9 +204,13 @@ class HeaderBlock(DiskBlock):
         hash_index = util.compute_hash(filename, self.block_size())
         sector_num = self.hashtable_entry_at(hash_index)
         header = self.logical_volume.header_block_at(sector_num)
+        while (header.name().upper() != filename.upper() and
+               header.next_hash() != 0):
+            # follow hash chain
+            next_sector_num = self.hashtable_entry_at(header.next_hash())
+            header = self.logical_volume.header_block_at(next_sector_num)
         if header.name().upper() != filename.upper():
-            # TODO follow hash chain
-            raise Exception("Hash collision, resolve by following next hash (TODO)")
+            raise Exception("can't find file/dir '%s'" % filename)
 
         return header
 
