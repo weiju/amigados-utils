@@ -1,0 +1,24 @@
+#!/usr/bin/env python3
+import argparse
+
+from amigados.adftools import logical, physical, util
+
+
+if __name__ == '__main__':
+    description = """amigados-delete - Python implementation of AmigaDOS delete"""
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument('adf', help="ADF File")
+    parser.add_argument('path', help="path to delete")
+    args = parser.parse_args()
+
+    try:
+        with open(args.adf, "rb") as infile:
+            disk = physical.read_adf_image(infile)
+            volume = logical.LogicalVolume(disk)
+            volume.delete(args.path)
+
+        # final step: write updated ADF data
+        with open(args.adf, "wb") as outfile:
+            outfile.write(disk.data)
+    except Exception as e:
+        print("ERROR: ", e)

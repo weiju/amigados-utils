@@ -87,10 +87,12 @@ class ADFToolsLogicalTest(unittest.TestCase):  # pylint: disable-msg=R0904
         file_blocks = [980, 982, 731, 706]
         for b in file_blocks:
             self.assertFalse(b in free_blocks)
+            self.assertTrue(b in used_blocks)
         volume.delete("failat")
         free_blocks, used_blocks = root_block.block_allocation()
         for b in file_blocks:
             self.assertTrue(b in free_blocks)
+            self.assertFalse(b in used_blocks)
 
 
 if __name__ == '__main__':

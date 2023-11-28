@@ -4,7 +4,7 @@
 
   - Improved project description
   - Refactoring
-  - amigados-makedir added
+  - amigados-makedir and amigados-delete added
   - License set to BSD
 
 
