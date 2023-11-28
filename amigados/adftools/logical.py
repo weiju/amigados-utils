@@ -38,6 +38,9 @@ ROOT_BLOCK_SIZE_OFFSET_FILESYS_CREATION_TIME = -28
 ROOT_BLOCK_VALID_BITMAP = -1
 
 HEADER_BLOCK_OFFSET_HEADER_KEY = 4
+HEADER_BLOCK_OFFSET_HIGH_SEQ   = 8
+HEADER_BLOCK_OFFSET_DATA_SIZE  = 12
+HEADER_BLOCK_OFFSET_FIRST_DATA = 16
 HEADER_BLOCK_OFFSET_CHECKSUM   = 20
 HEADER_BLOCK_OFFSET_HASHTABLE  = 24
 
@@ -126,6 +129,9 @@ class HeaderBlock(DiskBlock):
     def secondary_type(self):
         sector = self.sector()
         return sector.i32_at(sector.size_in_bytes() - 4)
+
+    def is_file(self):
+        return self.secondary_type() == BLOCK_SEC_TYPE_FILE
 
     def is_directory(self):
         return self.secondary_type() == BLOCK_SEC_TYPE_USERDIR
@@ -242,6 +248,28 @@ class HeaderBlock(DiskBlock):
                 curblock = self.logical_volume.header_block_at(curblock.next_hash())
             curblock.set_next_hash(blocknum)
 
+    def delete_hashtable_entry_at(self, index, blocknum):
+        """delete block number from the bucket at the specified hash table index"""
+        sector = self.sector()
+        if index > self.hashtable_size():
+            raise IndexError("Index out of bounds: %d, hash table size: %d" %
+                             (index, self.hashtable_size()))
+        cur_blocknum = sector.u32_at(HEADER_BLOCK_OFFSET_HASHTABLE + (index * 4))
+        if cur_blocknum == blocknum:  # found !!!
+            # update the table with the next_hash block number, which can be 0
+            target_header = self.logical_volume.header_block_at(blocknum)
+            sector.set_u32_at(HEADER_BLOCK_OFFSET_HASHTABLE + (index * 4),
+                              target_header.next_hash())
+        else:  # process the chain
+            curblock = self.logical_volume.header_block_at(cur_blocknum)
+            prev_hash = None
+            while curblock.header_key() != blocknum and curblock.next_hash() != 0:
+                prev_hash = curblock
+                curblock = self.logical_volume.header_block_at(curblock.next_hash())
+            # remove the block from the chain and update the checksum
+            prev_hash.set_next_hash(curblock.next_hash())
+            prev_hash.update_checksum()
+
     def _set_name(self, name):
         """Sets the name field in the block. Never use this directly,
         since it can change the hash value of this block"""
@@ -268,7 +296,7 @@ class HeaderBlock(DiskBlock):
     # File header block only
     def high_seq(self):
         """number of data block pointers"""
-        return self.sector().u32_at(8)
+        return self.sector().u32_at(HEADER_BLOCK_OFFSET_HIGH_SEQ)
 
     def file_size(self):
         return self.sector().u32_at(self.block_size() - 188)
@@ -309,13 +337,16 @@ class RootBlock(HeaderBlock):
     def bitmap_flag(self):
         return self.sector().i32_at(self.block_size() + ROOT_BLOCK_SIZE_OFFSET_BITMAP_FLAG)
 
+    def bitmap_block0(self):
+        return BitmapBlock(self.logical_volume,
+                           self.sector().u32_at(self.block_size() + ROOT_BLOCK_SIZE_OFFSET_BITMAP_PAGES))
+
     def block_allocation(self):
         sector = self.sector()
         bm_pages = []
         if self.bitmap_flag() == ROOT_BLOCK_VALID_BITMAP:
             # we only need 1 bitmap block on a floppy disk
-            bitmap_block = BitmapBlock(self.logical_volume,
-                                       sector.u32_at(self.block_size() + ROOT_BLOCK_SIZE_OFFSET_BITMAP_PAGES))
+            bitmap_block = self.bitmap_block0()
             bm_sector = bitmap_block.sector()
             block_idx = 2
             free_blocks = []
@@ -345,9 +376,10 @@ class RootBlock(HeaderBlock):
         if not blocknum in free_blocks:
             raise Exception("ERROR: can't allocate block %d - already used !!!" % blocknum)
         # we only need 1 bitmap block on a floppy disk
-        bitmap_block = BitmapBlock(self.logical_volume,
-                                   self.sector().u32_at(self.block_size() + ROOT_BLOCK_SIZE_OFFSET_BITMAP_PAGES))
-        bitmap_block.mark_block_used(blocknum)
+        self.bitmap_block0().mark_block_used(blocknum)
+
+    def free_block(self, blocknum):
+        self.bitmap_block0().mark_block_free(blocknum)
 
 
 class BitmapBlock(DiskBlock):
@@ -385,6 +417,22 @@ class BitmapBlock(DiskBlock):
         sector = self.sector()
         orig = sector.u32_at(bytenum)
         sector.set_u32_at(bytenum, mask & orig)
+
+        # update checksum
+        sector.set_u32_at(BITMAP_BLOCK_OFFSET_CHECKSUM, self.computed_checksum())
+
+    def mark_block_free(self, blocknum):
+        # 1. determine the long word in the bitmap that contains the bit
+        # 2. set the bit mask and do bitwise "and" with that long word and store it back
+        # 3. update checksum
+        wordnum = int((blocknum - 2) / 32)
+        bytenum = (wordnum + 1) * 4
+        bitnum = (blocknum - 2) % 32
+        # set 1 bit and shift to create an or-mask
+        mask = 0x80000000 >> bitnum
+        sector = self.sector()
+        orig = sector.u32_at(bytenum)
+        sector.set_u32_at(bytenum, mask | orig)
 
         # update checksum
         sector.set_u32_at(BITMAP_BLOCK_OFFSET_CHECKSUM, self.computed_checksum())
@@ -500,3 +548,43 @@ class LogicalVolume:
         parent_dir.update_last_modification_time()
         root_block.update_last_disk_modification_time()
         parent_dir.update_checksum()
+        root_block.update_checksum()
+
+    def delete(self, pathstr):
+        path = [p for p in pathstr.split("/") if len(p) > 0]
+
+        # Can't create root directory
+        if len(path) == 0:
+            raise Exception("Can't delete directory '/'")
+        # TODO: Check for valid paths
+        targetpath = '/'.join(path)
+        target_header = self.header_for_path(targetpath)
+        root_block = self.root_block()
+        if target_header.is_file():
+            # 1. Delete file
+            # a. delete header from parent's hash table
+            parent = self.header_block_at(target_header.parent())
+            hash_index = util.compute_hash(target_header.name(), parent.block_size())
+            parent.delete_hashtable_entry_at(hash_index, target_header.header_key())
+
+            # b. free all the bitmap bits the file occupies. This includes the header
+            # block and all the data blocks
+            for data_block in target_header.data_blocks():
+                root_block.free_block(data_block)
+            root_block.free_block(target_header.header_key())
+
+            #   c. update modification times and checksums
+            parent.update_last_modification_time()
+            root_block.update_last_disk_modification_time()
+            parent.update_checksum()
+            root_block.update_checksum()
+
+        elif target_header.is_directory():
+            # TODO:
+            # 2. Delete directory
+            #   a. Recursively delete all the children
+            #   b. Delete this directory by deleting the header and freeing the bitmap bits
+            raise Exception("TODO: deleting directories not implemented yet")
+        else:
+            raise Exception("TODO: deleting secondary type %d not implemented yet" %
+                            target_header.secondary_type())

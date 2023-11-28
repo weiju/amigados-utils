@@ -59,4 +59,5 @@ if __name__ == '__main__':
           scripts=['bin/amigados-png2image', 'bin/amigados-fdtool',
                    'bin/amigados-dalf', 'bin/amigados-bumprev',
                    'bin/amigados-dir', 'bin/amigados-copy',
-                   'bin/amigados-makedir', 'bin/amigados-createdisk'])
+                   'bin/amigados-makedir', 'bin/amigados-createdisk',
+                   'bin/amigados-delete'])

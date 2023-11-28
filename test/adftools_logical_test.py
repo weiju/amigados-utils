@@ -77,6 +77,21 @@ class ADFToolsLogicalTest(unittest.TestCase):  # pylint: disable-msg=R0904
         new_checksum = bitmap_block.computed_checksum()
         self.assertEqual(bitmap_block.stored_checksum(), new_checksum)
 
+    def test_delete_file(self):
+        """delete a file from disk"""
+        with open("testdata/wbench1.3.adf", "rb") as infile:
+            disk = physical.read_adf_image(infile)
+        volume = logical.LogicalVolume(disk)
+        root_block = volume.root_block()
+        free_blocks, used_blocks = root_block.block_allocation()
+        file_blocks = [980, 982, 731, 706]
+        for b in file_blocks:
+            self.assertFalse(b in free_blocks)
+        volume.delete("failat")
+        free_blocks, used_blocks = root_block.block_allocation()
+        for b in file_blocks:
+            self.assertTrue(b in free_blocks)
+
 
 if __name__ == '__main__':
     SUITE = []
