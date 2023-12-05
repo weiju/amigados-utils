@@ -136,6 +136,9 @@ class HeaderBlock(DiskBlock):
     def is_directory(self):
         return self.secondary_type() == BLOCK_SEC_TYPE_USERDIR
 
+    def header_key(self):
+        return self.sector().u32_at(HEADER_BLOCK_OFFSET_HEADER_KEY)
+
     def name(self):
         sector = self.sector()
         soffset = sector.size_in_bytes() + HEADER_BLOCK_SIZE_OFFSET_NAME_LEN
@@ -169,9 +172,6 @@ class HeaderBlock(DiskBlock):
         self._set_amigados_time_at(HEADER_BLOCK_SIZE_OFFSET_LAST_MODIFIED,
                                    days, minutes, ticks)
 
-    def header_key(self):
-        return self.sector().u32_at(HEADER_BLOCK_OFFSET_HEADER_KEY)
-
     def stored_checksum(self):
         return self.sector().u32_at(HEADER_BLOCK_OFFSET_CHECKSUM)
 
@@ -180,6 +180,10 @@ class HeaderBlock(DiskBlock):
 
     def update_checksum(self):
         self.sector().set_u32_at(HEADER_BLOCK_OFFSET_CHECKSUM, self.computed_checksum())
+
+    def mark_as_modified(self):
+        self.update_last_modification_time()
+        self.update_checksum()
 
     def file_comment(self):
         sector = self.sector()
@@ -205,6 +209,13 @@ class HeaderBlock(DiskBlock):
 
     #################################
     # Directory header block only
+    def is_empty(self):
+        # inspect the hash table
+        for i in range(self.hashtable_size()):
+            ht_entry = self.hashtable_entry_at(i)
+            if ht_entry != 0:
+                return False
+        return True
 
     def find_header(self, filename):
         hash_index = util.compute_hash(filename, self.block_size())
@@ -270,6 +281,11 @@ class HeaderBlock(DiskBlock):
             prev_hash.set_next_hash(curblock.next_hash())
             prev_hash.update_checksum()
 
+    def delete_child_from_hashtable(self, child_header):
+        hash_index = util.compute_hash(child_header.name(), self.block_size())
+        self.delete_hashtable_entry_at(hash_index, child_header.header_key())
+
+
     def _set_name(self, name):
         """Sets the name field in the block. Never use this directly,
         since it can change the hash value of this block"""
@@ -330,6 +346,10 @@ class RootBlock(HeaderBlock):
         days, minutes, ticks = util.datetime_to_amigados_time(now)
         self._set_amigados_time_at(ROOT_BLOCK_SIZE_OFFSET_LAST_DISK_ALTERATION,
                                    days, minutes, ticks)
+
+    def mark_disk_as_modified(self):
+        self.update_last_disk_modification_time()
+        self.update_checksum()
 
     def filesys_creation_time(self):
         return self._amigados_time_at(ROOT_BLOCK_SIZE_OFFSET_FILESYS_CREATION_TIME)
@@ -550,41 +570,49 @@ class LogicalVolume:
         parent_dir.update_checksum()
         root_block.update_checksum()
 
-    def delete(self, pathstr):
+    def delete(self, pathstr, recursive=False):
         path = [p for p in pathstr.split("/") if len(p) > 0]
 
         # Can't create root directory
         if len(path) == 0:
             raise Exception("Can't delete directory '/'")
+
         # TODO: Check for valid paths
         targetpath = '/'.join(path)
         target_header = self.header_for_path(targetpath)
         root_block = self.root_block()
+        parent = self.header_block_at(target_header.parent())
+
         if target_header.is_file():
             # 1. Delete file
             # a. delete header from parent's hash table
-            parent = self.header_block_at(target_header.parent())
-            hash_index = util.compute_hash(target_header.name(), parent.block_size())
-            parent.delete_hashtable_entry_at(hash_index, target_header.header_key())
+            parent.delete_child_from_hashtable(target_header)
 
             # b. free all the bitmap bits the file occupies. This includes the header
             # block and all the data blocks
+            # TODO: for some reason, the blocks don't seem to be all freed actually
             for data_block in target_header.data_blocks():
                 root_block.free_block(data_block)
             root_block.free_block(target_header.header_key())
 
-            #   c. update modification times and checksums
-            parent.update_last_modification_time()
-            root_block.update_last_disk_modification_time()
-            parent.update_checksum()
-            root_block.update_checksum()
-
         elif target_header.is_directory():
-            # TODO:
             # 2. Delete directory
-            #   a. Recursively delete all the children
-            #   b. Delete this directory by deleting the header and freeing the bitmap bits
-            raise Exception("TODO: deleting directories not implemented yet")
+            if not recursive and not target_header.is_empty():
+                # throw exception, because we don't delete recursive
+                raise Exception("Directory '%s' is not empty - can't delete" % pathstr)
+            elif not recursive:
+                # Unlink from parent and delete from bitmap
+                parent.delete_child_from_hashtable(target_header)
+                root_block.free_block(target_header.header_key())
+            else:
+                # TODO:
+                #   a. Recursively delete all the children
+                #   b. Delete this directory by deleting the header and freeing the bitmap bits
+                raise Exception("TODO: deleting directories not implemented yet")
         else:
             raise Exception("TODO: deleting secondary type %d not implemented yet" %
                             target_header.secondary_type())
+
+        # final step: mark parent and disk as modified
+        parent.mark_as_modified()
+        root_block.mark_disk_as_modified()
