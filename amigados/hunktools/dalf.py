@@ -2,8 +2,8 @@
 an Amiga Hunk file.
 """
 import struct
+from amigados.vm.disassemble import disassemble
 
-from .disassemble import disassemble
 
 HUNK_BLOCK_UNIT         = b'\x00\x00\x03\xe7'
 HUNK_BLOCK_NAME         = b'\x00\x00\x03\xe8'
