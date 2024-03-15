@@ -597,17 +597,21 @@ class LogicalVolume:
 
         elif target_header.is_directory():
             # 2. Delete directory
-            if not recursive and not target_header.is_empty():
-                # throw exception, because we don't delete recursive
-                raise Exception("Directory '%s' is not empty - can't delete" % pathstr)
-            elif not recursive:
+            if target_header.is_empty():
                 # Unlink from parent and delete from bitmap
                 parent.delete_child_from_hashtable(target_header)
                 root_block.free_block(target_header.header_key())
+            elif not recursive:
+                # throw exception, because we don't delete recursive
+                raise Exception("Directory '%s' is not empty - can't delete" % pathstr)
             else:
                 # TODO:
                 #   a. Recursively delete all the children
                 #   b. Delete this directory by deleting the header and freeing the bitmap bits
+                # Pseudo code
+                # for each child
+                #   delete child
+                # delete this node
                 raise Exception("TODO: deleting directories not implemented yet")
         else:
             raise Exception("TODO: deleting secondary type %d not implemented yet" %
