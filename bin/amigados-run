@@ -1,0 +1,14 @@
+#!/usr/bin/env python3
+import os
+import argparse
+
+from amigados.vm import vm
+
+
+if __name__ == '__main__':
+    description = """amigados-run - Run an AmigaDOS command (c) 2024 Wei-ju Wu"""
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument('dosexe', help="AmigaDOS executable file")
+
+    args = parser.parse_args()
+    vm.run(args.dosexe)

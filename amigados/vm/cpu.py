@@ -42,15 +42,46 @@ CONDITION_CODES = [
 
 class IntConstant:
     def __init__(self, value):
-        self.value = value
+        self.val = value  # don't call it "value", naming clash !!
+
+    def value(self, vm_state, size):
+        return self.val
 
     def __repr__(self):
-        return '#%02x' % self.value
+        return '#%02x' % self.val
+
+
+class AbsoluteAddress:
+    def __init__(self, addr, size):
+        self.addr = addr
+        self.size = size
+
+    def value(self, vm_state, size):
+        # size parameter is ignored
+        return vm_state.value_at(self.addr, self.size)
+
+    def __repr__(self):
+        return '#%02x.%s' % (self.addr, self.size)
+
+
+class PCIndirectDisplacement:
+    def __init__(self, disp16):
+        self.disp16 = disp16
+
+    def __repr__(self):
+        return "%02x(PC)" % self.disp16
+
 
 
 class DataRegister:
     def __init__(self, regnum):
         self.regnum = regnum
+
+    def value(self, vm_state, size):
+        return vm_state.d[self.regnum]
+
+    def set_value(self, vm_state, size, value):
+        vm_state.d[self.regnum] = value
 
     def __repr__(self):
         return 'd%d' % self.regnum
@@ -59,6 +90,12 @@ class DataRegister:
 class AddressRegister:
     def __init__(self, regnum):
         self.regnum = regnum
+
+    def value(self, vm_state, size):
+        return vm_state.a[self.regnum]
+
+    def set_value(self, vm_state, size, value):
+        vm_state.a[self.regnum] = value
 
     def __repr__(self):
         return 'a%d' % self.regnum
@@ -107,6 +144,41 @@ class AddressRegisterIndirectDisplacementIndex:
         return '(%02x,a%d,%02x)' % (self.displacement, self.regnum, self.index)
 
 
+class AddressSpace:
+    def __init__(self, size):
+        self.mem = [0] * size
+
+    def value_at(self, addr, size):
+        return self.mem[addr]
+
+    def set_value_at(self, addr, size, value):
+        self.mem[addr] = value
+
+
+class CpuState:
+
+    def __init__(self, addr_space):
+        self.d = [0] * 8
+        self.a = [0] * 8
+        self.pc = 0
+        self.sr = 0
+        self.addr_space = addr_space
+
+    def value_at(self, addr, size):
+        return self.addr_space.value_at(addr, size)
+
+    def set_value_at(self, addr, size, value):
+        self.addr_space.set_value_at(addr, size, value)
+
+    def __repr__(self):
+        out = ""
+        print(self.a)
+        for index, aval in enumerate(self.a):
+            out += "a%d: %d\t\td%d: %d\n" % (index, aval, index, self.d[index])
+
+        return out
+
+
 ######################################################################
 #### Opcode classes
 ######################################################################
@@ -128,8 +200,12 @@ class Opcode(object):
     def is_return(self):
         return self.name == 'rts'
 
+    def execute(self, vm_state):
+        vm_state.pc += self.size
+
     def __repr__(self):
         return "%s" % self.name
+
 
 class Operation2(Opcode):
     def __init__(self, name, size, src, dest):
@@ -139,6 +215,16 @@ class Operation2(Opcode):
 
     def __repr__(self):
         return "%s\t%s,%s" % (self.name, self.src, self.dest)
+
+
+class MoveInstruction(Operation2):
+    def __init__(self, name, size, src, dest):
+        Operation2.__init__(self, name, size, src, dest)
+
+    def execute(self, vm_state):
+        srcval = self.src.value(vm_state, self.size)
+        self.dest.set_value(vm_state, self.size, srcval)
+        Operation2.execute(self, vm_state)
 
 
 class Operation1(Opcode):
@@ -216,15 +302,18 @@ def operand(size, mode_bits, reg_bits, data, offset, skip=0):
     if mode == 'EXT':
         mode = ADDR_MODES_EXT[reg_bits]
         regnum = int(reg_bits, 2)
+        # TODO: immediate operands are currently only string, might be
+        # better to make them class instances
         if mode == '#<data>':
             imm_value, added = next_word(size, data, offset + 2 + skip)
             result = IntConstant(imm_value)
         elif mode in {'(xxx).L', '(xxx).W'}:  # absolute
             addr, added = next_word(mode[-1], data, offset + 2 + skip)
-            result = "%02x.%s" % (addr, mode[-1])
+            result = AbsoluteAddress(addr, mode[-1])
         elif mode == '(d16,PC)':
             disp16, added = next_word('W', data, offset + 2 + skip)
-            result = "%02x(PC)" % disp16
+            #result = "%02x(PC)" % disp16
+            result = PCIndirectDisplacement(disp16)
         else:
             raise Exception("unsupported ext mode: '%s'" % mode)
     elif mode == '(d16,An)':
@@ -256,9 +345,9 @@ def decode_move(bits, data, offset):
     total_added += added
 
     # src: mode|reg
-    src_op,added = operand(category[-1], bits[10:13], bits[13:16], data, offset)
+    src_op, added = operand(category[-1], bits[10:13], bits[13:16], data, offset)
     total_added += added
-    return Operation2(category, total_added, src_op, dst_op)
+    return MoveInstruction(category, total_added, src_op, dst_op)
 
 def decode_add_sub(name, bits, data, offset):
     total_added = 2
@@ -326,6 +415,7 @@ def decode(data, offset):
     # first step categorize by looking at bits 15-12
     opcode = bits[0:4]
     category = OPCODE_CATEGORIES[opcode]
+    print(bits)
 
     if is_move(category):
         instr = decode_move(bits, data, offset)
@@ -339,7 +429,8 @@ def decode(data, offset):
     elif category == 'moveq':
         regnum = int(bits[4:7], 2)
         value = signed8(int(bits[8:16], 2))
-        instr = Operation2('moveq', 2, IntConstant(value), DataRegister(regnum))
+        #instr = Operation2('moveq', 2, IntConstant(value), DataRegister(regnum))
+        instr = MoveInstruction("moveq", 2, IntConstant(value), DataRegister(regnum))
     elif category == 'bcc_bsr_bra':
         if bits[0:8] == '01100000':  # bra
             disp, added = branch_displacement(bits, data, offset)

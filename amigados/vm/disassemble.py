@@ -2,7 +2,9 @@ import struct
 from collections import deque
 from amigados.vm.cpu import *
 
-
+# update: we are using Capstone instead of
+# making our own disassembler
+from capstone import *
 
 
 def print_instruction(address, instr):

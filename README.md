@@ -23,5 +23,3 @@ pip install amigados-utils
 
 ROM Kernel Manuals: http://amigadev.elowar.com/
 ADF format: http://lclevy.free.fr/adflib/adf_info.html
-
-

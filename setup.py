@@ -29,7 +29,7 @@ CLASSIFIERS = [
     "Programming Language :: Python :: Implementation :: CPython",
     "Topic :: Software Development :: Libraries :: Python Modules"
     ]
-INSTALL_REQUIRES = ['pillow', 'Jinja2']
+INSTALL_REQUIRES = ['pillow>=10.0.0', 'Jinja2>=3.0.0', 'capstone>=5.0.0']
 
 PACKAGE_DATA = {
     'amigados': []
