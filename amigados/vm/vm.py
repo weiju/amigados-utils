@@ -84,25 +84,10 @@ def run(hunkfile):
             if index == 0 and i.mnemonic.startswith('bra'):
                 new_offset = int(i.op_str.replace('$', ''), 16)
                 print("(skip %d bytes)" % new_offset)
-                break
+            break
 
-        # this is the skip handler
-        if new_offset is not None:
-            for i in md.disasm(code_block[1][new_offset:], new_offset):
-                print("0x%x:\t%s\t%s" %(i.address, i.mnemonic, i.op_str))
+        # skip the data block at the start of the code if there is one
+        start_offset = new_offset if new_offset is not None else 0
 
-
-        """
-        # Set up the decode/run loop
-        for i in range(4):
-            instr = decode(block1, vm_state.pc)
-            print(instr)
-            instr.execute(vm_state)
-            if instr.is_return():
-                # return address from stack
-                pass
-
-            # regular increment
-            #if not instr.is_absolute_branch():
-            #    pc += instr.size
-        print(vm_state)"""
+        for i in md.disasm(code_block[1][start_offset:], start_offset):
+            print("0x%x:\t%s\t%s" %(i.address, i.mnemonic, i.op_str))
