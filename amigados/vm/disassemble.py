@@ -1,6 +1,5 @@
 import struct
 from collections import deque
-from amigados.vm.cpu import *
 
 from capstone import *
 

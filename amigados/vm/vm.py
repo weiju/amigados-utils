@@ -1,7 +1,44 @@
-from .cpu import *
 from amigados.hunktools.dalf import *
 from capstone import *
 
+
+class AddressSpace:
+    def __init__(self, size):
+        self.mem = [0] * size
+
+    def value_at(self, addr, size):
+        return self.mem[addr]
+
+    def set_value_at(self, addr, size, value):
+        self.mem[addr] = value
+
+
+class CpuState:
+
+    def __init__(self, addr_space):
+        self.d = [0] * 8
+        self.a = [0] * 8
+        self.pc = 0
+        self.sr = 0
+        self.addr_space = addr_space
+
+    def value_at(self, addr, size):
+        return self.addr_space.value_at(addr, size)
+
+    def set_value_at(self, addr, size, value):
+        self.addr_space.set_value_at(addr, size, value)
+
+    def __repr__(self):
+        out = ""
+        print(self.a)
+        for index, aval in enumerate(self.a):
+            out += "a%d: %d\t\td%d: %d\n" % (index, aval, index, self.d[index])
+
+        return out
+
+################################
+# Code execution functions
+#######
 
 def read_blocks(infile, is_loadfile):
     result = []
@@ -78,16 +115,32 @@ def run(hunkfile):
         # there is data at the start of the code block,
         # so we skip the data and start decoding after that
         index = 0
-        new_offset = None
+        start_offset = None
+
+        # skip over data at the begining of the code
         for i in md.disasm(code_block[1], 0):
             print("0x%x:\t%s\t%s" %(i.address, i.mnemonic, i.op_str))
             if index == 0 and i.mnemonic.startswith('bra'):
-                new_offset = int(i.op_str.replace('$', ''), 16)
-                print("(skip %d bytes)" % new_offset)
+                start_offset = int(i.op_str.replace('$', ''), 16)
+                print("(skip %d bytes)" % start_offset)
             break
 
-        # skip the data block at the start of the code if there is one
-        start_offset = new_offset if new_offset is not None else 0
+        running = True
+        while running:
+            do_continue = False
+            for i in md.disasm(code_block[1][start_offset:], start_offset):
+                do_continue = execute_instruction(vm_state, i)
+            running = False
 
-        for i in md.disasm(code_block[1][start_offset:], start_offset):
-            print("0x%x:\t%s\t%s" %(i.address, i.mnemonic, i.op_str))
+
+def execute_move(vm_state, size, operands):
+    print("MOVE SIZE: %s operands: %s" % (size, str(operands)))
+
+
+def execute_instruction(vm_state, i):
+    if i.mnemonic.startswith("move."):
+        operands = [op.strip() for op in i.op_str.split(",")]
+        execute_move(vm_state, i.mnemonic[-1], operands)
+    else:
+        print("0x%x:\t%s\t%s" % (i.address, i.mnemonic, i.op_str))
+    return True
